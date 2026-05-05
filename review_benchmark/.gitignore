@@ -1,0 +1,42 @@
+# ── Output directories (large data, not tracked) ─────────────────────
+depth_of_analysis/output/
+constructiveness/output/
+flaw_identification/output/
+
+# ── Python cache ──────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environments ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+.env
+
+# ── IDE / OS ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.DS_Store
+Thumbs.db
+
+# ── Jupyter ───────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Logs ─────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Large data files ──────────────────────────────────────────────────
+*.jsonl
+*.zip
+*.tar.gz
+
+# ── API keys / secrets ────────────────────────────────────────────────
+.env
+secrets.py
+api_keys.py
+
