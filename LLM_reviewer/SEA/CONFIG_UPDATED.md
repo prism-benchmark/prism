@@ -1,0 +1,64 @@
+# Configuration Updated ✅
+
+## Changes Made
+
+All vLLM scripts have been updated to use **ICLR2025 grobid_fulltext** dataset:
+
+### Updated Files
+
+1. **vllm_config.py**
+   - INPUT_DIR: `/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext`
+   - File format: `.grobid.txt` (11,465 papers available)
+   - PAPER_IDS_FILE: `/mnt/duyna/review_assessment/paper_ids_specific.txt` (50 papers to process)
+   - OUTPUT_DIR: `/mnt/duyna/review_assessment/sea_output_new`
+   - BATCH_SIZE: 16 (increased for faster processing)
+
+2. **run_review_vllm.py**
+   - Updated `get_mmd_files()` to auto-detect `.grobid.txt` files
+   - Handles both `.mmd` and `.grobid.txt` formats
+   - Default argument updated for new paths
+
+3. **Documentation**
+   - SETUP_COMPLETE.md: Updated paths and file format info
+   - VLLM_GUIDE.md: Updated all examples with new paths
+
+## Quick Start
+
+```bash
+cd /home/duy.na/ongoing_projects/SEA
+python generate_reviews.py
+```
+
+Or with bash:
+```bash
+bash run_vllm.sh
+```
+
+## Verification
+
+✅ Input directory: 11,465 papers available
+✅ Paper IDs file: 50 papers to process  
+✅ Output directory: Ready for output
+
+## Key Features
+
+- ✅ Auto-detects `.grobid.txt` files
+- ✅ Falls back to `.mmd` if needed
+- ✅ Batch processing (16 papers at a time)
+- ✅ GPU optimization for fast inference
+- ✅ Resume support (skips completed papers)
+
+## Performance Estimate
+
+With batch_size=16 on single GPU:
+- Estimated time: ~50 papers × ~2-3 min/paper = **1.5-2.5 hours total**
+- With multi-GPU (2x): **~1 hour**
+- With multi-GPU (4x): **~30 minutes**
+
+To increase speed, edit vllm_config.py:
+```python
+BATCH_SIZE = 32              # Increase (needs more VRAM)
+TENSOR_PARALLEL_SIZE = 2     # Use 2 GPUs
+```
+
+## Ready to Run! 🚀

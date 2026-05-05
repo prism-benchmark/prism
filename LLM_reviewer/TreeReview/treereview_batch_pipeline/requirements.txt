@@ -1,0 +1,11 @@
+langchain-core~=0.3.46
+langchain~=0.3.21
+tiktoken~=0.8.0
+openai~=1.66.3
+python-dotenv~=1.0.1
+nltk~=3.9.1
+numpy~=1.26.4
+torch~=2.5.1
+transformers~=4.46.3
+accelerate>=0.20.0
+PyMuPDF>=1.24.0
