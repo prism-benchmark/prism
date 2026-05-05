@@ -5,7 +5,7 @@ Mac inh chay tren subset 50 paper IDs (paper_ids_50_neurips2025.txt).
 
 Cach chay:
     python pipeline/run_human_neurips2025_mimo.py
-    python pipeline/run_human_neurips2025_mimo.py --paper_ids e:/path/to/ids.txt
+    python pipeline/run_human_neurips2025_mimo.py --paper_ids /path/to/ids.txt
     python pipeline/run_human_neurips2025_mimo.py --all   (chay tat ca)
 
 Output: pipeline/output/human_neurips2025_mimo/{paper_id}.json
@@ -24,8 +24,8 @@ import pipeline.config as config
 #  CAU HINH
 # ================================================================
 
-NEURIPS2025_HUMAN_DIR    = r"E:\Final_LLM_Reviewer_Data\Neurlps2025\human_reviews"
-NEURIPS2025_PAPER_IDS_50 = r"E:\Final_LLM_Reviewer_Data\Neurlps2025\paper_ids_50_neurips2025.txt"
+NEURIPS2025_HUMAN_DIR    = config.HUMAN_DIRS["NeurIPS2025"]
+NEURIPS2025_PAPER_IDS_50 = config.paper_ids_file("NeurIPS2025", 50)
 
 PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR   = os.path.join(PIPELINE_DIR, "output", "human_neurips2025_mimo")

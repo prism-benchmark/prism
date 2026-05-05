@@ -1,10 +1,13 @@
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 .venv/
 venv/
 env/
-LLM_reviewer/Deepreview/Researcher/.deepreview_venv/
+LLM_reviewer/Deepreview_CycleReview/Researcher/.deepreview_venv/
 
 .env
 .env.*
@@ -14,5 +17,21 @@ secrets*.py
 *.pem
 *.key
 
-LLM_reviewer/Deepreview/run/*_local.py
-LLM_reviewer/Deepreview/run/.env
+*.sqlite
+*.db
+*.log
+*.out
+*.err
+
+**/output/
+**/outputs/
+**/logs/
+**/cache/
+**/.cache/
+**/__pycache__/
+
+LLM_reviewer/Deepreview_CycleReview/run/*_local.py
+LLM_reviewer/Deepreview_CycleReview/run/.env
+LLM_reviewer/Deepreview_CycleReview/failed_papers.json
+LLM_reviewer/SEA/sea_output*/
+LLM_reviewer/Reviewer2/output*/

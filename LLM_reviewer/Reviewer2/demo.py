@@ -1,6 +1,7 @@
 import sys
 import json
 import math
+import os
 import re
 import torch
 import argparse
@@ -43,9 +44,9 @@ MIN_OUTPUT_TOKENS = 4096
 def parse_args():
     parser = argparse.ArgumentParser(description="Reviewer2 Demo - Batch Processing")
     parser.add_argument('--json_path', type=str, default='', help="path to single paper json file")
-    parser.add_argument('--mmd_dir', type=str, default='/datastore/npl/luannt/IHSD/Reviewer2/data/paper_nougat_mmd', 
+    parser.add_argument('--mmd_dir', type=str, default=os.getenv("REVIEWER2_MMD_DIR", "data/paper_nougat_mmd"), 
                         help="directory with .mmd files to batch process")
-    parser.add_argument('--output_dir', type=str, default='/datastore/npl/luannt/IHSD/Reviewer2/output',
+    parser.add_argument('--output_dir', type=str, default=os.getenv("REVIEWER2_OUTPUT_DIR", "outputs/reviewer2"),
                         help="directory to save .txt reviews")
     parser.add_argument('--paper_ids', type=str, default='', 
                         help="Path to paper_ids.txt file to filter which .mmd files to process (optional)")

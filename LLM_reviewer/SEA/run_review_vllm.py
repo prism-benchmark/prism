@@ -292,19 +292,19 @@ def main():
     parser.add_argument(
         "--input-dir",
         type=str,
-        default="/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext",
+        default=os.getenv("SEA_INPUT_DIR", "data/grobid_fulltext"),
         help="Input directory with GROBID full text files (.grobid.txt)"
     )
     parser.add_argument(
         "--paper-ids",
         type=str,
-        default="/mnt/duyna/review_assessment/paper_ids_specific.txt",
+        default=os.getenv("SEA_PAPER_IDS_FILE", "data/paper_ids.txt"),
         help="File with paper IDs (one per line)"
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="/mnt/duyna/review_assessment/sea_output_new",
+        default=os.getenv("SEA_OUTPUT_DIR", "outputs/sea_reviews"),
         help="Output directory for generated reviews"
     )
     parser.add_argument(

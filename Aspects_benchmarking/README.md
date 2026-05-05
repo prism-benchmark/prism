@@ -1,12 +1,12 @@
-# Review Evaluation Framework
+# PRISM Aspect Benchmarking
 
-A unified benchmark framework for evaluating the quality of AI-generated academic paper reviews across three complementary dimensions: **Depth of Analysis**, **Constructiveness**, and **Flaw Identification & Prioritization**.
+A unified, anonymized benchmark framework for evaluating the quality of AI-generated academic paper reviews across four complementary dimensions: **Depth of Analysis**, **Novelty Assessment**, **Flaw Identification & Prioritization**, and **Multi-Dimensional Constructiveness**.
 
 ---
 
 ## Table of Contents
 1. [Repository Structure](#repository-structure)
-2. [Dataset: Final\_LLM\_Reviewer\_Data](#dataset-final_llm_reviewer_data)
+2. [Dataset](#dataset)
 3. [Metrics Overview](#metrics-overview)
 4. [Conferences Evaluated](#conferences-evaluated)
 5. [Reviewer Types Compared](#reviewer-types-compared)
@@ -15,16 +15,16 @@ A unified benchmark framework for evaluating the quality of AI-generated academi
    - [Depth of Analysis](#depth-of-analysis)
    - [Constructiveness](#constructiveness)
    - [Flaw Identification](#flaw-identification)
-8. [Citation](#citation)
+8. [Release Notes](#release-notes)
 
 ---
 
 ## Repository Structure
 
 ```
-review_benchmark/
-├── .env.example                # ← copy to .env and fill in your paths/keys
-├── env_loader.py               # shared env loader used by all 3 aspects
+Aspects_benchmarking/
+├── .env.example                # copy to .env and fill in local paths/keys
+├── env_loader.py               # shared env loader used by all aspects
 ├── requirements.txt
 │
 ├── depth_of_analysis/          # DoA pipeline (ADU segmentation → grounding)
@@ -85,11 +85,11 @@ review_benchmark/
 
 ---
 
-## Dataset: Final\_LLM\_Reviewer\_Data
+## Dataset
 
 The evaluation dataset is **not included** in this repository. Download it separately and set `DATA_ROOT` in your `.env` (see [Setup](#setup)).
 
-> **Download:** <!-- TODO: add Zenodo / HuggingFace / Google Drive link here -->
+For double-blind review, use an anonymized artifact host and avoid committing private storage URLs or local filesystem paths.
 
 After downloading, the folder must have this layout:
 
@@ -169,8 +169,7 @@ Final_LLM_Reviewer_Data/
 ### 1. Clone the repository and install dependencies
 
 ```bash
-git clone https://github.com/your-org/review_benchmark.git
-cd review_benchmark
+cd Aspects_benchmarking
 pip install -r requirements.txt
 ```
 
@@ -190,20 +189,20 @@ Open `.env` and fill in your values:
 # Absolute path to the downloaded dataset root
 DATA_ROOT=/absolute/path/to/Final_LLM_Reviewer_Data
 
-# Gemini (default evaluator backend)
-GOOGLE_API_KEY=AIza...
+# Gemini evaluator backend
+GOOGLE_API_KEY=
 
-# Mimo v2.5 Pro (robustness / alternative evaluator)
-MIMO_API_KEY=tp-...
-MIMO_BASE_URL=https://api.xiaomimimo.com/v1   # optional, this is the default
+# Optional OpenAI-compatible evaluator backend for robustness checks
+MIMO_API_KEY=
+MIMO_BASE_URL=
 
 # Optional backends
-# OPENAI_API_KEY=sk-...
+# OPENAI_API_KEY=
 # AZURE_OPENAI_API_KEY=...
 # AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 ```
 
-> **All three pipelines** (DoA, Constructiveness, Flaw Identification) load this single `.env` file automatically via `env_loader.py`. No other path configuration is needed.
+> **All aspect pipelines** load this single `.env` file automatically via `env_loader.py`. No secrets or machine-specific paths should be committed.
 
 ### 4. Verify
 
@@ -395,14 +394,10 @@ python flaw_identification/compute_flaw_mimo_vs_gemini.py
 
 ---
 
-## Citation
+## Release Notes
 
-If you use this framework, please cite our paper:
+This artifact is intended for anonymous review. Before distribution:
 
-```bibtex
-@inproceedings{reviewbenchmark2025,
-  title     = {A Multi-Dimensional Framework for Evaluating AI-Generated Academic Reviews},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2025},
-}
-```
+- Keep `.env`, generated outputs, caches, and cluster logs out of version control.
+- Replace any private dataset URL with an anonymous artifact link.
+- Add the final citation only after the anonymity period, or use the conference-provided anonymous citation format.

@@ -1,7 +1,7 @@
-﻿"""
+"""
 Flaw-Identification Pipeline – NeurIPS 2025 entry point (Mimo v2.5 Pro).
 
-Data paths  : E:\\Final_LLM_Reviewer_Data\\Neurlps2025\\  (note: typo in folder name)
+Data paths  : <DATA_ROOT>/Neurlps2025/  (dataset keeps this spelling)
 Default LLM : Mimo v2.5 Pro  (OpenAI-compatible API)
 Paper IDs   : paper_ids_50_neurips2025.txt  (50-paper subset)
 

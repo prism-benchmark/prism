@@ -4,7 +4,7 @@ from tqdm import tqdm
 import os
 import torch
 model_name = "ECNU-SEA/SEA-E"
-cache_path = '/mnt/duyna/review_assessment/model/SEA'
+cache_path = os.getenv("SEA_MODEL_CACHE", "models/SEA")
 tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_path)
 
 chat_model = AutoModelForCausalLM.from_pretrained(
@@ -67,8 +67,8 @@ def run_review(mmd_file_path):
 
 if __name__ == "__main__":
     # 1. Đường dẫn thư mục Input và Output
-    input_dir = "/mnt/duyna/review_assessment/data/extracted_files_500_iclr2024/papers_mmd" 
-    output_dir = "/mnt/duyna/review_assessment/sea_output_iclr2024"
+    input_dir = os.getenv("SEA_INPUT_DIR", "data/papers_mmd")
+    output_dir = os.getenv("SEA_OUTPUT_DIR", "outputs/sea_iclr2024")
     
     # Tự động tạo thư mục output nếu chưa có
     if not os.path.exists(output_dir):

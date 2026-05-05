@@ -39,12 +39,12 @@ pip install vllm>=0.3.0
 ```
 
 ### 2. Basic Configuration (Already Set)
-The default config points to:
+The default config can be overridden with environment variables:
 ```
-Input:   /mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext
-Format:  .grobid.txt files (11,465 papers)
-Paper IDs: /mnt/duyna/review_assessment/paper_ids_specific.txt
-Output:  /mnt/duyna/review_assessment/sea_output_new
+Input:   SEA_INPUT_DIR or data/grobid_fulltext
+Format:  .grobid.txt files
+Paper IDs: SEA_PAPER_IDS_FILE or data/paper_ids.txt
+Output:  SEA_OUTPUT_DIR or outputs/sea_reviews
 Model:   Qwen/Qwen2-7B-Instruct (7B parameters, ~15GB)
 ```
 
@@ -52,22 +52,22 @@ Model:   Qwen/Qwen2-7B-Instruct (7B parameters, ~15GB)
 
 **Option A: Python (Recommended)**
 ```bash
-cd /home/duy.na/ongoing_projects/SEA
+cd LLM_reviewer/SEA
 python generate_reviews.py
 ```
 
 **Option B: Bash**
 ```bash
-cd /home/duy.na/ongoing_projects/SEA
+cd LLM_reviewer/SEA
 bash run_vllm.sh
 ```
 
 **Option C: Direct Python (Full Control)**
 ```bash
 python run_review_vllm.py \
-    --input-dir "/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext" \
-    --paper-ids "/mnt/duyna/review_assessment/paper_ids_specific.txt" \
-    --output-dir "/mnt/duyna/review_assessment/sea_output_new"
+    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
+    --paper-ids "/path/to/data/ICLR2025/paper_ids.txt" \
+    --output-dir "outputs/sea_iclr2025"
 ```
 
 ## Performance Tuning
@@ -129,8 +129,8 @@ watch -n 1 nvidia-smi
 
 ### Check Output
 ```bash
-ls -lh /mnt/duyna/review_assessment/sea_output_new | head -20
-wc -l /mnt/duyna/review_assessment/sea_output_new/*.txt
+ls -lh outputs/sea_reviews | head -20
+wc -l outputs/sea_reviews/*.txt
 ```
 
 ### Resume Interrupted Run
@@ -153,18 +153,18 @@ GPU_MEMORY_UTILIZATION = 0.8      # reduce
 pip install vllm
 ```
 
-**"Cannot access /mnt/duyna/review_assessment..."**
+**"Cannot access configured input paths"**
 Check that paths exist:
 ```bash
-ls /mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext | head
-ls /mnt/duyna/review_assessment/paper_ids_specific.txt
+ls /path/to/data/ICLR2025/grobid_fulltext | head
+ls /path/to/data/ICLR2025/paper_ids.txt
 ```
 
 ## Next Steps
 
-1. ✅ Run: `python /home/duy.na/ongoing_projects/SEA/generate_reviews.py`
+1. Run: `python generate_reviews.py`
 2. Monitor GPU usage: `nvidia-smi`
-3. Check output reviews in: `/mnt/duyna/review_assessment/sea_output_new/`
+3. Check output reviews in: `outputs/sea_reviews/`
 4. Adjust config in `vllm_config.py` if needed for better performance
 
 ## Key Features

@@ -36,6 +36,7 @@ except ImportError:
     HAS_MPL = False
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import pipeline.config as config
 
 # ================================================================
 #  CONFIG: Paths
@@ -45,11 +46,8 @@ OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 
 # Paper IDs 50 cho tung conference
 PAPER_IDS_50 = {
-    "ICLR2024":    r"E:\Final_LLM_Reviewer_Data\ICLR2024\paper_ids_50_iclr2024.txt",
-    "ICLR2025":    r"E:\Final_LLM_Reviewer_Data\ICLR2025\paper_ids_50_iclr2025.txt",
-    "ICLR2026":    r"E:\Final_LLM_Reviewer_Data\ICLR2026\paper_ids_50_iclr2026.txt",
-    "ICML2025":    r"E:\Final_LLM_Reviewer_Data\ICML2025\paper_ids_50_icml2025.txt",
-    "NeurIPS2025": r"E:\Final_LLM_Reviewer_Data\Neurlps2025\paper_ids_50_neurips2025.txt",
+    conf: config.paper_ids_file(conf, 50)
+    for conf in ["ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025"]
 }
 
 # Folder mapping cho tung source x conference

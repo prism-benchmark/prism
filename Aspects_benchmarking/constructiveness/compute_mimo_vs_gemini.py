@@ -28,16 +28,19 @@ REVIEWER_TYPES = ["human", "sea", "tree", "reviewer2", "deepreview", "cyclerevie
 DIMENSIONS = ["D1_actionability_mean", "D2_specificity_mean", "D3_justification_mean",
                "D4_solution_mean", "D5_tone_mean"]
 
+DATA_ROOT = os.getenv("DATA_ROOT", "/path/to/Final_LLM_Reviewer_Data")
+METRIC_DATA_ROOT = os.getenv("METRIC_DATA_ROOT", "/path/to/Final Metric Data")
+
 PAPER_IDS_50 = {
-    "iclr2024":    r"E:\Final_LLM_Reviewer_Data\ICLR2024\paper_ids_50_iclr2024.txt",
-    "iclr2025":    r"E:\Final_LLM_Reviewer_Data\ICLR2025\paper_ids_50_iclr2025.txt",
-    "iclr2026":    r"E:\Final_LLM_Reviewer_Data\ICLR2026\paper_ids_50_iclr2026.txt",
-    "icml2025":    r"E:\Final_LLM_Reviewer_Data\ICML2025\paper_ids_50_icml2025.txt",
-    "neurips2025": r"E:\Final_LLM_Reviewer_Data\Neurlps2025\paper_ids_50_neurips2025.txt",
+    "iclr2024":    os.path.join(DATA_ROOT, "ICLR2024", "paper_ids_50_iclr2024.txt"),
+    "iclr2025":    os.path.join(DATA_ROOT, "ICLR2025", "paper_ids_50_iclr2025.txt"),
+    "iclr2026":    os.path.join(DATA_ROOT, "ICLR2026", "paper_ids_50_iclr2026.txt"),
+    "icml2025":    os.path.join(DATA_ROOT, "ICML2025", "paper_ids_50_icml2025.txt"),
+    "neurips2025": os.path.join(DATA_ROOT, "Neurlps2025", "paper_ids_50_neurips2025.txt"),
 }
 
 # Mimo paths: output/<conf>/mimo/<rtype>/all_results_lite.jsonl
-MIMO_BASE = r"E:\Unified-pipeline\constructiveness_v2\output"
+MIMO_BASE = os.getenv("CONSTRUCTIVENESS_MIMO_OUTPUT_ROOT", os.path.join("output"))
 
 def mimo_path(conf: str, rtype: str) -> str:
     return os.path.join(MIMO_BASE, conf, "mimo", rtype, "all_results_lite.jsonl")
@@ -70,7 +73,7 @@ def gemini_path(conf: str, rtype: str) -> Optional[str]:
         "cyclereview": ("CycleReview", f"cyclereview_{conf}"),
     }
 
-    base = r"E:\result\Final Metric Data"
+    base = METRIC_DATA_ROOT
     conf_up = conf_upper_map[conf]
 
     if rtype == "human":

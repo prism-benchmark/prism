@@ -21,11 +21,11 @@ Cach chay:
 Output: pipeline/output/mimo_{source_name}/{paper_id}.json
 
 Paper IDs Mapping:
-  ICLR2024    -> E:/Final_LLM_Reviewer_Data/ICLR2024/paper_ids_50_iclr2024.txt
-  ICLR2025    -> E:/Final_LLM_Reviewer_Data/ICLR2025/paper_ids_50_iclr2025.txt
-  ICLR2026    -> E:/Final_LLM_Reviewer_Data/ICLR2026/paper_ids_50_iclr2026.txt
-  ICML2025    -> E:/Final_LLM_Reviewer_Data/ICML2025/paper_ids_50_icml2025.txt
-  NeurIPS2025 -> E:/Final_LLM_Reviewer_Data/Neurlps2025/paper_ids_50_neurips2025.txt
+  ICLR2024    -> DATA_ROOT/ICLR2024/paper_ids_50_iclr2024.txt
+  ICLR2025    -> DATA_ROOT/ICLR2025/paper_ids_50_iclr2025.txt
+  ICLR2026    -> DATA_ROOT/ICLR2026/paper_ids_50_iclr2026.txt
+  ICML2025    -> DATA_ROOT/ICML2025/paper_ids_50_icml2025.txt
+  NeurIPS2025 -> DATA_ROOT/Neurlps2025/paper_ids_50_neurips2025.txt
 """
 
 import sys
@@ -81,11 +81,8 @@ SOURCES_BY_CONFERENCE = {
 
 # Paper IDs file mapping cho tung conference
 PAPER_IDS_50_BY_CONFERENCE = {
-    "ICLR2024": r"E:\Final_LLM_Reviewer_Data\ICLR2024\paper_ids_50_iclr2024.txt",
-    "ICLR2025": r"E:\Final_LLM_Reviewer_Data\ICLR2025\paper_ids_50_iclr2025.txt",
-    "ICLR2026": r"E:\Final_LLM_Reviewer_Data\ICLR2026\paper_ids_50_iclr2026.txt",
-    "ICML2025": r"E:\Final_LLM_Reviewer_Data\ICML2025\paper_ids_50_icml2025.txt",
-    "NeurIPS2025": r"E:\Final_LLM_Reviewer_Data\Neurlps2025\paper_ids_50_neurips2025.txt",
+    conf: config.paper_ids_file(conf, 50)
+    for conf in ["ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025"]
 }
 
 ALL_SOURCES = []

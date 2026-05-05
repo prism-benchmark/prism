@@ -22,7 +22,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Paths
-BASE = Path("/home/25thanh.tk/novelty_vefification/output")
+BASE = Path(os.getenv("NOVELTY_OUTPUT_ROOT", str(Path(__file__).resolve().parents[1] / "output")))
 OUTPUT_DIR = BASE / "llm_comparison_analysis"
 FIGURES_DIR = OUTPUT_DIR / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)

@@ -2,15 +2,15 @@
 
 ## Changes Made
 
-All vLLM scripts have been updated to use **ICLR2025 grobid_fulltext** dataset:
+All vLLM scripts can be configured for an ICLR-style `grobid_fulltext` dataset:
 
 ### Updated Files
 
 1. **vllm_config.py**
-   - INPUT_DIR: `/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext`
-   - File format: `.grobid.txt` (11,465 papers available)
-   - PAPER_IDS_FILE: `/mnt/duyna/review_assessment/paper_ids_specific.txt` (50 papers to process)
-   - OUTPUT_DIR: `/mnt/duyna/review_assessment/sea_output_new`
+   - INPUT_DIR: `SEA_INPUT_DIR` or `/path/to/data/ICLR2025/grobid_fulltext`
+   - File format: `.grobid.txt`
+   - PAPER_IDS_FILE: `SEA_PAPER_IDS_FILE` or `/path/to/data/ICLR2025/paper_ids.txt`
+   - OUTPUT_DIR: `SEA_OUTPUT_DIR` or `outputs/sea_reviews`
    - BATCH_SIZE: 16 (increased for faster processing)
 
 2. **run_review_vllm.py**
@@ -25,7 +25,7 @@ All vLLM scripts have been updated to use **ICLR2025 grobid_fulltext** dataset:
 ## Quick Start
 
 ```bash
-cd /home/duy.na/ongoing_projects/SEA
+cd LLM_reviewer/SEA
 python generate_reviews.py
 ```
 

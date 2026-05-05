@@ -508,8 +508,8 @@ if __name__ == "__main__":
             import functools
             def _filtered_compute(sname):
                 return _orig_compute(sname, filter_ids=filter_ids)
-            # Temporarily patch
-            import pipeline.evaluate as _self
+            # Temporarily patch this module's function (avoid cross-module aliasing).
+            _self = sys.modules[__name__]
             _self.compute_metrics_for_source = _filtered_compute
             compare_all_sources(human_results)
             _self.compute_metrics_for_source = _orig_compute

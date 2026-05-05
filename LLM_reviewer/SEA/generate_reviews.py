@@ -35,7 +35,7 @@ def main():
         import vllm_config as cfg
     except ImportError:
         print("Error: vllm_config.py not found!")
-        print("Please ensure you're running from /home/duy.na/ongoing_projects/SEA")
+        print("Please run this script from the LLM_reviewer/SEA directory or add it to PYTHONPATH.")
         sys.exit(1)
     
     # Show configuration

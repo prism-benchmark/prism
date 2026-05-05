@@ -1,5 +1,6 @@
 import argparse
 import glob
+import os
 import re
 from pathlib import Path
 
@@ -179,19 +180,19 @@ def parse_args():
     parser.add_argument(
         "--grobid_dir",
         type=str,
-        default="/datastore/npl/luannt/IHSD/Reviewer2/NeurIPS2025/grobid_fulltext",
+        default=os.getenv("REVIEWER2_GROBID_DIR", "data/NeurIPS2025/grobid_fulltext"),
         help="Directory containing full-text files (.grobid.txt and/or .txt)",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/datastore/npl/luannt/IHSD/Reviewer2/output_reviewer2_neurips2025",
+        default=os.getenv("REVIEWER2_OUTPUT_DIR", "outputs/reviewer2_neurips2025"),
         help="Directory to save .txt reviews",
     )
     parser.add_argument(
         "--model_path",
         type=str,
-        default="/datastore/npl/luannt/.cache/huggingface/Qwen3-14B",
+        default=os.getenv("REVIEWER2_MODEL_PATH", "Qwen/Qwen3-14B"),
         help="Path to the base model",
     )
     parser.add_argument(
@@ -209,7 +210,7 @@ def parse_args():
     parser.add_argument(
         "--paper_ids",
         type=str,
-        default="/datastore/npl/luannt/IHSD/Reviewer2/NeurIPS2025/data_subset/paper_ids.txt",
+        default=os.getenv("REVIEWER2_PAPER_IDS", "data/NeurIPS2025/data_subset/paper_ids.txt"),
         help="Optional path to a paper_ids.txt file for filtering",
     )
     parser.add_argument(

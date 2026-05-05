@@ -1,5 +1,6 @@
 import argparse
 import glob
+import os
 import re
 from pathlib import Path
 
@@ -79,19 +80,19 @@ def parse_args():
     parser.add_argument(
         "--grobid_dir",
         type=str,
-        default="/datastore/npl/luannt/IHSD/Reviewer2/ICLR2025/grobid_fulltext",
+        default=os.getenv("REVIEWER2_GROBID_DIR", "data/ICLR2025/grobid_fulltext"),
         help="Directory containing .grobid.txt files",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/datastore/npl/luannt/IHSD/Reviewer2/output_reviewer2_iclr2025",
+        default=os.getenv("REVIEWER2_OUTPUT_DIR", "outputs/reviewer2_iclr2025"),
         help="Directory to save .txt reviews",
     )
     parser.add_argument(
         "--model_path",
         type=str,
-        default="/datastore/npl/luannt/.cache/huggingface/Qwen3-14B",
+        default=os.getenv("REVIEWER2_MODEL_PATH", "Qwen/Qwen3-14B"),
         help="Path to the base model",
     )
     parser.add_argument(

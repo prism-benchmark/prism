@@ -27,7 +27,7 @@ Edit `vllm_config.py` to customize:
 
 ### Quick Run (with Bash)
 ```bash
-cd /home/duy.na/ongoing_projects/SEA
+cd LLM_reviewer/SEA
 bash run_vllm.sh
 ```
 
@@ -35,9 +35,9 @@ bash run_vllm.sh
 ```bash
 python run_review_vllm.py \
     --model "Qwen/Qwen2-7B-Instruct" \
-    --input-dir "/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext" \
-    --paper-ids "/mnt/duyna/review_assessment/paper_ids_specific.txt" \
-    --output-dir "/mnt/duyna/review_assessment/sea_output_new" \
+    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
+    --paper-ids "/path/to/data/ICLR2025/paper_ids.txt" \
+    --output-dir "outputs/sea_iclr2025" \
     --batch-size 8 \
     --tensor-parallel-size 1 \
     --skip-completed
@@ -174,8 +174,8 @@ bash run_vllm.sh
 ```bash
 python run_review_vllm.py \
     --model "Qwen/Qwen2-7B-Instruct" \
-    --input-dir "/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext" \
-    --output-dir "/mnt/duyna/review_assessment/sea_output_new" \
+    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
+    --output-dir "outputs/sea_iclr2025" \
     --no-skip-completed
 ```
 
@@ -188,8 +188,8 @@ bash run_vllm.sh  # Automatically skips completed papers
 ```bash
 python run_review_vllm.py \
     --model "mistralai/Mistral-7B-Instruct-v0.1" \
-    --input-dir "/mnt/duyna/review_assessment/data/ICLR2025/grobid_fulltext" \
-    --output-dir "/mnt/duyna/review_assessment/sea_output_new"
+    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
+    --output-dir "outputs/sea_iclr2025"
 ```
 
 ## Model Recommendations
@@ -199,7 +199,7 @@ python run_review_vllm.py \
 - `Qwen/Qwen2-72B-Instruct` (~144GB, multi-GPU only)
 
 ### For Balance (recommended)
-- `Qwen/Qwen2-7B-Instruct` (~15GB) ✅
+- `Qwen/Qwen2-7B-Instruct` (~15GB)
 - `meta-llama/Llama-2-7b-chat-hf` (~15GB)
 
 ### For Speed (less VRAM, may see slight quality loss)

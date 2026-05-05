@@ -1,88 +1,50 @@
-<div align="center">
+# SEA Baseline (Anonymous Artifact Version)
 
-# <img src="assets/logo.png" alt="SEA" width="5%"> &nbsp; Automated Peer Reviewing in Paper SEA: Standardization, Evaluation, and Analysis
+This directory contains the SEA-based reviewer generation baseline used in the
+PRISM benchmark artifact. The content here is scoped to reproducible local
+execution for benchmarking and intentionally excludes non-essential project
+metadata.
 
-[![Website](https://img.shields.io/website?url=https://ecnu-sea.github.io/)](https://ecnu-sea.github.io/)
-[![Paper](https://img.shields.io/badge/paper--blue)](https://arxiv.org/pdf/2407.12857v2)
-![Python](https://img.shields.io/badge/python-3.10-blue)
-[![HuggingFace](https://img.shields.io/badge/🤗-HuggingFace-orange)](https://huggingface.co/ECNU-SEA)
+## Scope
 
-</div>
+- Generate review drafts from paper text inputs.
+- Run batched inference for benchmark splits.
+- Export outputs in the format expected by downstream evaluation scripts.
 
-**Unsure about the shortcomings in your work? Here’s what you can do....**
+## Quick Start
 
-https://github.com/ecnu-sea/sea/assets/52284163/2473418b-be94-4691-96d8-7ba79ab4690b
+1. Install dependencies from the repository root:
 
-## 🔥 News
-- *2024.09*: 🎉 SEA is accepted by EMNLP2024 ! 🥳🥳🥳🥂🥂🥂
-- *2024.06*: 🎉 We have made SEA series [models](https://huggingface.co/ECNU-SEA) and [dataset](https://huggingface.co/datasets/ECNU-SEA/SEA_data) public !
-
-## ❓ What is SEA 
-
-SEA is a novel framework for automated paper reviewing based on three modules: Standardization, Evaluation, and Analysis. SEA is capable of generating comprehensive and high-quality review feedback with high consistency for papers, thereby assisting researchers in improving the quality of their work.
-
-## ⚡️ Quickstart
-1. **Clone the GitHub Repository:** 
-
-   ```shell
-   git clone https://github.com/ecnu-sea/SEA.git
-   ```
-
-2. **Set Up Python Environment:** 
-
-   ```shell
-   conda create -n sea python=3.10 -y
-   conda activate sea
-   ```
-
-3. **Install SEA Dependencies:** 
-   ```shell
-   cd SEA
-   pip install -r requirements.txt
-   ```
-   
-4. **Download SEA-E model:**
-   
-   You can download the [SEA-E](https://huggingface.co/ECNU-SEA/SEA-E) model from Hugging Face to a local path by yourself, or you can run the following download script code:
-   ```shell
-   python web_ui/download_model.py
-   ```
-
-6. **Now you are ready to have fun:**
-
-   Note that you can change the hyper parameters in run_webui.sh.
-   ```shell
-   cd web_ui
-   bash run_webui.sh
-   ```
-   **_Tips: You can set the model path downloaded from Hugging Face in the web_ui/run_webui.sh file._**
-   
-
-## 🛡 Disclaimer
-
-It must be underscored that the primary objective of SEA is to provide informative reviews for authors to **furnish authors with insightful critiques** aimed at **refining their works**, rather than directly influencing decisions regarding the acceptance or rejection of the papers. **Commercial use is not allowed.**, and we have emphasized this point in the supplementary clauses of the model's license.
-
-
-## 🔎 Citation
-
-```
-@inproceedings{yu2024automated,
-  title={Automated Peer Reviewing in Paper SEA: Standardization, Evaluation, and Analysis},
-  author={Yu, Jianxiang and Ding, Zichen and Tan, Jiaqi and Luo, Kangyang and Weng, Zhenmin and Gong, Chenghua and Zeng, Long and Cui, RenJing and Han, Chengcheng and Sun, Qiushi and others},
-  booktitle={Findings of the Association for Computational Linguistics: EMNLP 2024},
-  pages={10164--10184},
-  year={2024}
-}
+```bash
+pip install -r requirements.txt
 ```
 
+2. Configure runtime settings:
 
-## 📬 Contact
+- Edit `vllm_config.py` (or conference-specific variants).
+- Set `SEA_DATA_ROOT`, `INPUT_DIR`, `PAPER_IDS_FILE`, and `OUTPUT_DIR`.
+- Optionally set `CUDA_VISIBLE_DEVICES` in the environment.
 
-If you have any inquiries, suggestions, or wish to contact us for any reason, we warmly invite you to email us at sea.ecnu@gmail.com.
+3. Run generation:
 
-## 💐 Acknowledgments
-Thanks to [Nougat](https://github.com/facebookresearch/nougat) and [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory/tree/main) for their foundational contributions to this repository.
+```bash
+python generate_reviews.py
+```
 
-## ⭐ Star History
+For conference-specific runs, use the corresponding entrypoint such as
+`generate_reviews_iclr2026.py`.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ecnu-sea/sea&type=Date)](https://star-history.com/#ecnu-sea/sea&Date)
+## Input/Output Contract
+
+- **Input**: paper text files and optional paper-id subsets.
+- **Output**: one generated review file per paper id under the configured
+  output directory.
+
+These outputs are consumed by scripts in `Aspects_benchmarking/`.
+
+## Anonymity and Release Hygiene
+
+- Do not add names, emails, institutions, personal URLs, or private hostnames.
+- Keep secrets in environment variables or local `.env` files (never commit).
+- Avoid machine-specific absolute paths in committed configs and docs.
+

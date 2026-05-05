@@ -1,7 +1,7 @@
-﻿"""
+"""
 Flaw-Identification Pipeline – ICLR 2024 entry point.
 
-Data paths  : E:\\Final_LLM_Reviewer_Data\\ICLR2024\\
+Data paths  : <DATA_ROOT>/ICLR2024/
 Default LLM : Google Gemini 2.5 Flash Lite  (google-genai library)
 
 Three modes

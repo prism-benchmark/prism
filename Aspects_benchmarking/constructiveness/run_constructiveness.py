@@ -85,13 +85,13 @@ DEEPREVIEW_OUTPUT = os.path.join(OUTPUT_ROOT, "neurips2025", "deepreview_neurips
 TREE_OUTPUT       = os.path.join(OUTPUT_ROOT, "iclr2025", "tree",       "all_results_lite.jsonl")
 
 # ── ICML 2025 ──────────────────────────────────────────────────────────────────
-_ICML2025_ROOT        = r"E:\Final_LLM_Reviewer_Data\ICML2025"
+_ICML2025_ROOT        = _conf_path("ICML2025")
 ICML2025_HUMAN_FOLDER = os.path.join(_ICML2025_ROOT, "human_reviews")   # .json files
 ICML2025_PAPER_IDS    = os.path.join(_ICML2025_ROOT, "paper_ids_200_icml2025.txt")
 ICML2025_HUMAN_OUTPUT = os.path.join(OUTPUT_ROOT, "icml2025", "human", "all_results_lite.jsonl")
 
 # ── NeurIPS 2025 ───────────────────────────────────────────────────────────────
-_NEURIPS2025_ROOT        = r"E:\Final_LLM_Reviewer_Data\Neurlps2025"
+_NEURIPS2025_ROOT        = _conf_path("NeurIPS2025")
 NEURIPS2025_HUMAN_FOLDER = os.path.join(_NEURIPS2025_ROOT, "human_reviews")  # .json files
 NEURIPS2025_PAPER_IDS    = os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurlps2025.txt")
 NEURIPS2025_HUMAN_OUTPUT = os.path.join(OUTPUT_ROOT, "neurips2025", "human", "all_results_lite.jsonl")

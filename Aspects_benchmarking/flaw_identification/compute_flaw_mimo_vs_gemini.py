@@ -42,18 +42,20 @@ LLM_TYPES     = ["sea", "tree", "reviewer2", "deepreview", "cyclereview"]
 LLM_LABELS    = ["SEA", "Tree", "Reviewer2", "DeepReview", "CycleReview"]
 METRICS       = ["Critical_Recall", "Minor_Recall", "nCPS"]
 
+DATA_ROOT = os.getenv("DATA_ROOT", "/path/to/Final_LLM_Reviewer_Data")
+
 PAPER_IDS_50 = {
-    "iclr2024":    r"E:\Final_LLM_Reviewer_Data\ICLR2024\paper_ids_50_iclr2024.txt",
-    "iclr2025":    r"E:\Final_LLM_Reviewer_Data\ICLR2025\paper_ids_50_iclr2025.txt",
-    "iclr2026":    r"E:\Final_LLM_Reviewer_Data\ICLR2026\paper_ids_50_iclr2026.txt",
-    "icml2025":    r"E:\Final_LLM_Reviewer_Data\ICML2025\paper_ids_50_icml2025.txt",
-    "neurips2025": r"E:\Final_LLM_Reviewer_Data\Neurlps2025\paper_ids_50_neurips2025.txt",
+    "iclr2024":    os.path.join(DATA_ROOT, "ICLR2024", "paper_ids_50_iclr2024.txt"),
+    "iclr2025":    os.path.join(DATA_ROOT, "ICLR2025", "paper_ids_50_iclr2025.txt"),
+    "iclr2026":    os.path.join(DATA_ROOT, "ICLR2026", "paper_ids_50_iclr2026.txt"),
+    "icml2025":    os.path.join(DATA_ROOT, "ICML2025", "paper_ids_50_icml2025.txt"),
+    "neurips2025": os.path.join(DATA_ROOT, "Neurlps2025", "paper_ids_50_neurips2025.txt"),
 }
 
-FLAW_BASE = r"E:\Unified-pipeline\flaw_identification"
+FLAW_BASE = os.getenv("FLAW_OUTPUT_ROOT", os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(FLAW_BASE, "output_analysis")
 
-GEMINI_BASE = r"E:\result\Final Metric Data"
+GEMINI_BASE = os.getenv("METRIC_DATA_ROOT", "/path/to/Final Metric Data")
 GEMINI_TOP_MAP = {
     "sea":         "SEA",
     "tree":        "TreeReview",

@@ -17,7 +17,7 @@ Usage:
   python scripts/run_pipeline.py --paper paper.txt --review review.txt -o output/demo
 
   # Batch: all conferences, human reviews
-  python scripts/run_pipeline.py --data-root /home/25thanh.tk/crawl_data/full_conf
+  python scripts/run_pipeline.py --data-root /path/to/data
 
   # Batch: specific conferences, multiple review types, share task2
   python scripts/run_pipeline.py --data-root /path/to/data \\

@@ -1,24 +1,16 @@
 """
-run_llm_mimo.py  Xu ly LLM reviews bang Mimo v2.5 Pro evaluator.
+Run the Depth-of-Analysis pipeline on LLM reviews using the Mimo evaluator.
 
-Chay tren subset 50 paper IDs (paper_ids_50_iclr2024.txt).
-Ho tro tat ca LLM_SOURCES a inh nghia trong config.py.
-
-Cach chay:
+Examples:
     python pipeline/run_llm_mimo.py --source sea_iclr2024
-    python pipeline/run_llm_mimo.py --source tree_iclr2024
     python pipeline/run_llm_mimo.py --source reviewer2_iclr2024
-    python pipeline/run_llm_mimo.py --source deepreview_iclr2024
-    python pipeline/run_llm_mimo.py --source cyclereview_iclr2024
 
-    # Dung file paper IDs tuy chinh
+    # Custom paper-id subset
     python pipeline/run_llm_mimo.py --source sea_iclr2024 \\
-        --paper_ids "E:\\path\\to\\ids.txt"
+        --paper_ids "/path/to/paper_ids.txt"
 
-    # Chay tat ca (khong loc IDs)
+    # Run all papers in the source directory
     python pipeline/run_llm_mimo.py --source sea_iclr2024 --all
-
-Output: pipeline/output/mimo_{source_name}/{paper_id}.json
 """
 
 import sys
@@ -59,8 +51,8 @@ def save_result(output_dir: str, paper_id: str, result: dict):
 
 def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all: bool = False):
     if source_name not in config.LLM_SOURCES:
-        print(f" Source '{source_name}' khong ton tai.")
-        print(f"   Cac source hien co: {list(config.LLM_SOURCES.keys())}")
+        print(f" Source '{source_name}' not found.")
+        print(f"   Available sources: {list(config.LLM_SOURCES.keys())}")
         sys.exit(1)
 
     source_cfg = config.LLM_SOURCES[source_name]
@@ -69,7 +61,7 @@ def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all:
     llm_key    = source_name.upper()
 
     if not os.path.isdir(source_dir):
-        print(f" Thu muc source khong ton tai: {source_dir}")
+        print(f" Source directory does not exist: {source_dir}")
         sys.exit(1)
 
     # Output dir: pipeline/output/mimo_{source_name}/
@@ -78,10 +70,10 @@ def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all:
     # Loc paper IDs
     if run_all or paper_ids_file is None:
         target_ids = None
-        print("  Chay ALL papers (khong loc theo IDs).")
+        print("  Running ALL papers (no ID filtering).")
     else:
         target_ids = load_paper_ids(paper_ids_file)
-        print(f" Subset IDs : {len(target_ids)} papers  ({paper_ids_file})")
+        print(f" Subset IDs: {len(target_ids)} papers ({paper_ids_file})")
 
     # Khoi tao Mimo evaluator
     from src.mimo_client import MimoEvaluator
@@ -127,7 +119,7 @@ def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all:
     print(f"\n Source     : {source_name}  (format: {fmt})")
     print(f" Source dir : {source_dir}")
     print(f" Output dir : {output_dir}")
-    print(f" Tong papers: {total}  |  a xong: {already_done}  |  Con lai: {total - already_done}")
+    print(f" Total papers: {total} | Completed: {already_done} | Remaining: {total - already_done}")
     print("=" * 60)
 
     for paper_id, review_text, fname in tqdm(
@@ -147,7 +139,7 @@ def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all:
         print(f"\n [{paper_id}]  (file: {fname})")
 
         if not review_text:
-            print(f"    Text rong, bo qua.")
+            print("    Empty review text, skipping.")
             continue
 
         print(f"   {llm_key}")
@@ -188,9 +180,9 @@ def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all:
         }
 
         save_result(output_dir, paper_id, result)
-        print(f"   a luu  | tokens: {total_prompt + total_completion:,}")
+        print(f"   Saved | tokens: {total_prompt + total_completion:,}")
 
-    print(f"\n Mimo [{source_name}] hoan tat! Ket qua tai: {output_dir}")
+    print(f"\n Mimo [{source_name}] complete. Results: {output_dir}")
 
 
 # ================================================================
@@ -199,20 +191,20 @@ def run_llm_mimo_pipeline(source_name: str, paper_ids_file: str | None, run_all:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="DoA Pipeline  LLM reviews with Mimo v2.5 Pro evaluator"
+        description="Depth of Analysis: LLM reviews with Mimo evaluator."
     )
     parser.add_argument(
         "--source", type=str, required=True,
-        help=f"Ten LLM source. Hien co: {list(config.LLM_SOURCES.keys())}"
+        help=f"LLM source name. Available: {list(config.LLM_SOURCES.keys())}"
     )
     parser.add_argument(
         "--paper_ids", type=str,
         default=config.PAPER_IDS_50_FILE,
-        help="File .txt chua danh sach paper IDs can chay."
+        help="Path to a .txt file of target paper IDs."
     )
     parser.add_argument(
         "--all", action="store_true", dest="run_all",
-        help="Chay tat ca papers (bo qua --paper_ids)."
+        help="Run all papers in the source directory (ignore --paper_ids)."
     )
     args = parser.parse_args()
 

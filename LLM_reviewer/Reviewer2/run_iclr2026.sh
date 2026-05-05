@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=reviewer2_iclr2026
-#SBATCH --output=/datastore/npl/luannt/IHSD/Reviewer2/logs/reviewer2_iclr2026.out
-#SBATCH --error=/datastore/npl/luannt/IHSD/Reviewer2/logs/reviewer2_iclr2026.err
+#SBATCH --output=logs/reviewer2_iclr2026.out
+#SBATCH --error=logs/reviewer2_iclr2026.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
@@ -20,10 +20,10 @@ REQUIRED_VRAM=35000
 module clear -f
 
 module load shared python312
-source /datastore/npl/luannt/IHSD/.cache/venv/bin/activate
-export PATH="/datastore/npl/luannt/IHSD/.cache/venv/bin:$PATH"
-export PYTHONPATH="/datastore/npl/luannt/IHSD/.cache/venv/lib/python3.12/site-packages:$PYTHONPATH"
-cd /datastore/npl/luannt/IHSD/Reviewer2
+PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
+VENV_DIR="${VENV_DIR:-$PROJECT_ROOT/.venv}"
+source "$VENV_DIR/bin/activate"
+cd "$PROJECT_ROOT"
 
 unset CUDA_VISIBLE_DEVICES
 CHECK_OUT=$(/usr/local/bin/gpu_check.sh $REQUIRED_VRAM $SLURM_JOB_ID)
@@ -36,7 +36,7 @@ elif [ $EXIT_CODE -eq 11 ]; then
     exit 1
 fi
 BEST_GPU=$CHECK_OUT
-echo "✅ Job $SLURM_JOB_ID bắt đầu trên GPU: $BEST_GPU"
+echo "Job $SLURM_JOB_ID started on GPU: $BEST_GPU"
 
 # =========================================================
 # KHỞI TẠO PRIVATE MPS SERVER
@@ -54,10 +54,10 @@ export CUDA_VISIBLE_DEVICES=$BEST_GPU
 # =========================================================
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
 
-python /datastore/npl/luannt/IHSD/Reviewer2/demo_iclr2026_vllm.py \
-    --grobid_dir /datastore/npl/luannt/IHSD/Reviewer2/ICLR_2026/grobid_fulltext \
-    --output_dir /datastore/npl/luannt/IHSD/Reviewer2/output_reviewer2_iclr2026_fix_empty_review \
-    --paper_ids /datastore/npl/luannt/IHSD/Reviewer2/ICLR_2026/data_subset/paper_ids_errors.txt \
+python "$PROJECT_ROOT/demo_iclr2026_vllm.py" \
+    --grobid_dir "${REVIEWER2_GROBID_DIR:-$PROJECT_ROOT/data/ICLR_2026/grobid_fulltext}" \
+    --output_dir "${REVIEWER2_OUTPUT_DIR:-$PROJECT_ROOT/outputs/reviewer2_iclr2026}" \
+    --paper_ids "${REVIEWER2_PAPER_IDS:-$PROJECT_ROOT/data/ICLR_2026/data_subset/paper_ids.txt}" \
     --batch_size 4 \
     --gpu_memory_utilization 0.43 \
     --max_model_len 37000 \

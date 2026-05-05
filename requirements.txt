@@ -1,0 +1,8 @@
+#
+# Common dependencies for the PRISM evaluation artifact.
+#
+# This root file installs the lightweight benchmarking stack. Some reviewer
+# generation baselines have heavier, mutually incompatible environments; install
+# those from their subdirectory-specific requirement files when needed.
+
+-r Aspects_benchmarking/requirements.txt

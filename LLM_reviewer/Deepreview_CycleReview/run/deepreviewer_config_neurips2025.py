@@ -24,16 +24,17 @@ REVIEW_MODE            = "Standard Mode"  # "Fast Mode", "Standard Mode", "Best 
 REVIEWER_NUM           = 1          # 3 reviewers + 1 meta review (auto)
 
 # --- Dataset Folders ---
-MMD_FOLDER  = "/mnt/duyna/review_assessment/data/NeurIPS2025/grobid_fulltext"
-JSON_FOLDER = "/mnt/duyna/review_assessment/data/NeurIPS2025/json"
+DATA_ROOT = os.getenv("DATA_ROOT", "/path/to/data")
+MMD_FOLDER  = os.getenv("DEEPREVIEWER_MMD_FOLDER", os.path.join(DATA_ROOT, "NeurIPS2025", "grobid_fulltext"))
+JSON_FOLDER = os.getenv("DEEPREVIEWER_JSON_FOLDER", os.path.join(DATA_ROOT, "NeurIPS2025", "json"))
 
 # --- Paper Selection ---
 # Set to None to process all papers, or provide path to text file with paper IDs (one per line)
-PAPER_IDS_FILE = "/mnt/duyna/review_assessment/data/NeurIPS2025/data_subset/paper_ids_error.txt"
+PAPER_IDS_FILE = os.getenv("DEEPREVIEWER_PAPER_IDS_FILE", os.path.join(DATA_ROOT, "NeurIPS2025", "data_subset", "paper_ids_200.txt"))
 
 # --- Output ---
-OUTPUT_FOLDER = "/mnt/duyna/review_assessment/Deepreview_NEURIPS2025_output_fix_empty_review_3"
-SUMMARY_FILE  = "/mnt/duyna/review_assessment/summary/summary2025neuripssDEEP_fix_empty_review_2.json"
+OUTPUT_FOLDER = os.getenv("DEEPREVIEWER_OUTPUT_FOLDER", "outputs/deepreview_neurips2025")
+SUMMARY_FILE  = os.getenv("DEEPREVIEWER_SUMMARY_FILE", "outputs/summary_deepreview_neurips2025.json")
 
 # --- Resuming ---
 # If True, skip papers that already have a result file in OUTPUT_FOLDER

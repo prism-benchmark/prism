@@ -250,7 +250,7 @@ def run_pipeline(limit: int = None, all_papers: bool = False):
 
     reviewer = CycleReviewer(
         model_size=MODEL_SIZE,
-        custom_model_name="/mnt/duyna/review_assessment/model/CycleReviewer-8B",
+        custom_model_name=os.getenv("CYCLEREVIEWER_MODEL_PATH", os.path.join(HF_HOME, "CycleReviewer-8B")),
         tensor_parallel_size=tensor_parallel_size,
         gpu_memory_utilization=GPU_MEMORY_UTILIZATION,
         max_model_len=MAX_MODEL_LEN,

@@ -1,23 +1,18 @@
 """
-run_human_mimo.py  Xu ly Human reviews bang Mimo v2.5 Pro evaluator.
+Run the Depth-of-Analysis pipeline on human reviews using the Mimo evaluator.
 
-Chay tren subset 50 paper IDs (paper_ids_50_iclr2024.txt).
-Ho tro chay cho bat ky conference nao co human_reviews voi format JSON chuan.
-
-Cach chay:
-    # ICLR2024 (mac inh, 50 IDs)
+Examples:
+    # Default: ICLR2024 50-paper subset
     python pipeline/run_human_mimo.py
 
-    # Chi inh thu muc human va file paper IDs tuy y
+    # Custom human folder and paper-id subset
     python pipeline/run_human_mimo.py \\
-        --human_dir "E:\\Final_LLM_Reviewer_Data\\ICLR2025\\human_reviews" \\
-        --paper_ids "E:\\Final_LLM_Reviewer_Data\\ICLR2025\\paper_ids_50_iclr2025.txt" \\
+        --human_dir "/path/to/ICLR2025/human_reviews" \\
+        --paper_ids "/path/to/ICLR2025/paper_ids_50_iclr2025.txt" \\
         --output_suffix iclr2025
 
-    # Chay tat ca (khong loc IDs)
+    # Run all papers in the selected folder
     python pipeline/run_human_mimo.py --all
-
-Output: pipeline/output/human_mimo_{suffix}/{paper_id}.json
 """
 
 import sys
@@ -102,7 +97,7 @@ def run_human_mimo_pipeline(
 
     print(f"\n Human dir  : {human_dir}")
     print(f" Output dir : {output_dir}")
-    print(f" Tong papers: {total}  |  a xong: {already_done}  |  Con lai: {total - already_done}")
+    print(f" Total papers: {total} | Completed: {already_done} | Remaining: {total - already_done}")
     print("=" * 60)
 
     for filename in tqdm(all_files, desc=" Human [Mimo]", unit="paper"):
@@ -168,9 +163,9 @@ def run_human_mimo_pipeline(
 
         save_result(output_dir, paper_id, result)
         reviewers = list(result["reviews_analysis"].keys())
-        print(f"   a luu  [{', '.join(reviewers)}]  | tokens: {total_prompt + total_completion:,}")
+        print(f"   Saved [{', '.join(reviewers)}] | tokens: {total_prompt + total_completion:,}")
 
-    print(f"\n Human [Mimo] hoan tat! Ket qua tai: {output_dir}")
+    print(f"\n Human [Mimo] complete. Results: {output_dir}")
 
 
 # ================================================================
@@ -179,25 +174,25 @@ def run_human_mimo_pipeline(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="DoA Pipeline  Human reviews with Mimo v2.5 Pro evaluator"
+        description="Depth of Analysis: human reviews with Mimo evaluator."
     )
     parser.add_argument(
         "--human_dir", type=str,
-        default=r"E:\Final_LLM_Reviewer_Data\ICLR2024\human_reviews",
-        help="Thu muc chua human review JSON files."
+        default=config.HUMAN_DIRS["ICLR2024"],
+        help="Directory containing human-review JSON files."
     )
     parser.add_argument(
         "--paper_ids", type=str,
         default=config.PAPER_IDS_50_FILE,
-        help="File .txt chua danh sach paper IDs can chay (1 ID/dong)."
+        help="Path to a .txt file of target paper IDs (one ID per line)."
     )
     parser.add_argument(
         "--output_suffix", type=str, default="iclr2024",
-        help="Hau to output dir: pipeline/output/human_mimo_{suffix}/. Mac inh: iclr2024"
+        help="Output suffix used in pipeline/output/human_mimo_{suffix}/."
     )
     parser.add_argument(
         "--all", action="store_true", dest="run_all",
-        help="Chay tat ca paper (bo qua --paper_ids)."
+        help="Run all papers in --human_dir (ignore --paper_ids)."
     )
     args = parser.parse_args()
 

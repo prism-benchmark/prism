@@ -3,6 +3,8 @@ Configuration for vLLM Review Generation - ICLR2026
 Edit this file to customize settings before running the pipeline
 """
 
+import os
+
 # ============================================================
 # Model Configuration
 # ============================================================
@@ -11,9 +13,10 @@ MODEL_NAME = "Qwen/Qwen2-7B-Instruct"  # or "meta-llama/Llama-2-7b-chat-hf", etc
 # ============================================================
 # Data Paths
 # ============================================================
-INPUT_DIR = "/mnt/duyna/review_assessment/data/ICLR2026/grobid_fulltext"
-PAPER_IDS_FILE = "/mnt/duyna/review_assessment/data/ICLR2026/data_subset/paper_ids_200.txt"
-OUTPUT_DIR = "/mnt/duyna/review_assessment/sea_output_iclr2026"
+SEA_DATA_ROOT = os.getenv("SEA_DATA_ROOT", "/path/to/sea_data")
+INPUT_DIR = os.getenv("SEA_INPUT_DIR", os.path.join(SEA_DATA_ROOT, "ICLR2026", "grobid_fulltext"))
+PAPER_IDS_FILE = os.getenv("SEA_PAPER_IDS_FILE", os.path.join(SEA_DATA_ROOT, "ICLR2026", "data_subset", "paper_ids_200.txt"))
+OUTPUT_DIR = os.getenv("SEA_OUTPUT_DIR", "outputs/sea_iclr2026")
 
 # ============================================================
 # Inference Parameters
@@ -34,7 +37,7 @@ TOP_P = 0.95                           # Nucleus sampling parameter
 # ============================================================
 TENSOR_PARALLEL_SIZE = 1               # Number of GPUs (set to 2+ for larger models)
 GPU_MEMORY_UTILIZATION = 0.76          # GPU memory utilization (0.85-0.95 recommended)
-CUDA_VISIBLE_DEVICES = "6"             # GPU IDs to use
+CUDA_VISIBLE_DEVICES = os.getenv("CUDA_VISIBLE_DEVICES", "0")  # GPU IDs to use
 
 # ============================================================
 # Processing Options

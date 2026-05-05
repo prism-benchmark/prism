@@ -20,7 +20,7 @@ args = parser.parse_args()
 
 DESCRIPTION = """\
 
-# <img src="https://ecnu-sea.github.io/static/images/favicon.ico" style="width:50px; vertical-align:middle; margin-right:10px;"> SEA
+# SEA
 
 Please upload your paper's pdf and click `Submit` to get the reviews.
 """

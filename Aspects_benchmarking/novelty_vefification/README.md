@@ -195,20 +195,20 @@ output/demo/
 ```bash
 # Auto-detects layout, runs all conferences
 python scripts/run_pipeline.py \
-  --data-root /home/25thanh.tk/paper_data \
+  --data-root /path/to/paper_data \
   -o output/full_run
 
 # Specific conferences, limit papers per conference
 python scripts/run_pipeline.py \
-  --data-root /home/25thanh.tk/paper_data \
+  --data-root /path/to/paper_data \
   --conferences ICLR_2024 ICLR_2025 \
   --max-papers 50 \
   -o output/full_run
 
 # Custom LLM (overrides .env)
 python scripts/run_pipeline.py \
-  --data-root /home/25thanh.tk/paper_data \
-  --llm-provider openai --llm-model-name gpt-4o --llm-api-key "sk-..." \
+  --data-root /path/to/paper_data \
+  --llm-provider openai --llm-model-name gpt-4o --llm-api-key "$OPENAI_API_KEY" \
   -o output/full_run
 ```
 

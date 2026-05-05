@@ -1,7 +1,7 @@
-﻿"""
+"""
 Flaw-Identification Pipeline – ICML 2025 entry point (Mimo v2.5 Pro).
 
-Data paths  : E:\\Final_LLM_Reviewer_Data\\ICML2025\\
+Data paths  : <DATA_ROOT>/ICML2025/
 Default LLM : Mimo v2.5 Pro  (OpenAI-compatible API)
 Paper IDs   : paper_ids_50_icml2025.txt  (50-paper subset)
 

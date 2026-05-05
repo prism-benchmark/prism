@@ -38,7 +38,7 @@ plt.rcParams.update({
 })
 
 # Paths
-BASE = Path("/home/25thanh.tk/novelty_vefification/output")
+BASE = Path(os.getenv("NOVELTY_OUTPUT_ROOT", str(Path(__file__).resolve().parents[1] / "output")))
 MIMO_BASE = BASE / "subset_50"
 GEMINI_BASE = BASE / "full_conf_results"
 OUTPUT_DIR = BASE / "novelty_backbone_comparison"

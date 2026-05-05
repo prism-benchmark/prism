@@ -1,7 +1,7 @@
-﻿"""
+"""
 Flaw-Identification Pipeline – NeurIPS 2025 entry point.
 
-Data paths  : E:\\Final_LLM_Reviewer_Data\\Neurlps2025\\
+Data paths  : <DATA_ROOT>/Neurlps2025/
 Default LLM : Google Gemini 2.5 Flash Lite  (google-genai library)
 
 Key differences from ICLR / ICML pipelines:

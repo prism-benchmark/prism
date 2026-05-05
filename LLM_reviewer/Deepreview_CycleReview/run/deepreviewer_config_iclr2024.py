@@ -24,16 +24,17 @@ REVIEW_MODE            = "Standard Mode"  # "Fast Mode", "Standard Mode", "Best 
 REVIEWER_NUM           = 1          # 3 reviewers + 1 meta review (auto)
 
 # --- Dataset Folders ---
-MMD_FOLDER  = "/mnt/duyna/review_assessment/data/ICLR2024/paper_nougat_mmd"
-JSON_FOLDER = "/mnt/duyna/review_assessment/data/ICLR2024/Human_and_meta_reviews"
+DATA_ROOT = os.getenv("DATA_ROOT", "/path/to/data")
+MMD_FOLDER  = os.getenv("DEEPREVIEWER_MMD_FOLDER", os.path.join(DATA_ROOT, "ICLR2024", "paper_nougat_mmd"))
+JSON_FOLDER = os.getenv("DEEPREVIEWER_JSON_FOLDER", os.path.join(DATA_ROOT, "ICLR2024", "Human_and_meta_reviews"))
 
 # --- Paper Selection ---
 # Set to None to process all papers, or provide path to text file with paper IDs (one per line)
-PAPER_IDS_FILE = "/mnt/duyna/review_assessment/data/ICLR2024/data_subset/paper_ids_error.txt"
+PAPER_IDS_FILE = os.getenv("DEEPREVIEWER_PAPER_IDS_FILE", os.path.join(DATA_ROOT, "ICLR2024", "data_subset", "paper_ids.txt"))
 
 # --- Output ---
-OUTPUT_FOLDER = "/mnt/duyna/review_assessment/Deepreview_ICLR2024_output_fix_empty_review"
-SUMMARY_FILE  = "/mnt/duyna/review_assessment/summary/summary2024iclrDEEP_fix_empty_review.json"
+OUTPUT_FOLDER = os.getenv("DEEPREVIEWER_OUTPUT_FOLDER", "outputs/deepreview_iclr2024")
+SUMMARY_FILE  = os.getenv("DEEPREVIEWER_SUMMARY_FILE", "outputs/summary_deepreview_iclr2024.json")
 
 # --- Resuming ---
 # If True, skip papers that already have a result file in OUTPUT_FOLDER

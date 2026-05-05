@@ -1,7 +1,7 @@
-﻿"""
+"""
 Flaw-Identification Pipeline – ICML 2025 entry point.
 
-Data paths  : E:\\Final_LLM_Reviewer_Data\\ICML2025\\
+Data paths  : <DATA_ROOT>/ICML2025/
 Default LLM : Google Gemini 2.5 Flash Lite  (google-genai library)
 
 Key differences from ICLR pipelines:

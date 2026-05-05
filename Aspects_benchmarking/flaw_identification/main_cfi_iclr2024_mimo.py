@@ -1,7 +1,7 @@
-﻿"""
+"""
 Flaw-Identification Pipeline – ICLR 2024 entry point (Mimo v2.5 Pro).
 
-Data paths  : E:\\Final_LLM_Reviewer_Data\\ICLR2024\\
+Data paths  : <DATA_ROOT>/ICLR2024/
 Default LLM : Mimo v2.5 Pro  (OpenAI-compatible API)
 Paper IDs   : paper_ids_50_iclr2024.txt  (50-paper subset)
 
