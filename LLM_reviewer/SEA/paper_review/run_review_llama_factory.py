@@ -8,10 +8,10 @@ import sys
 from paper_review.utils import *
 
 
-def infer_one(mmd_file_path,chat_model):
+def infer_one(paper_file_path,chat_model):
     system_prompt_dict = read_json_file(os.path.join(os.path.dirname(os.path.abspath(__file__)),"template.json"))
     instruction = system_prompt_dict['instruction_e']
-    paper = read_txt_file(mmd_file_path)
+    paper = read_txt_file(paper_file_path)
     idx = paper.find("## References")
     paper = paper[:idx].strip()
     prompt = instruction + '\n' + paper
@@ -29,11 +29,11 @@ def init_model_llama_factory():
     chat_model = ChatModel()
     return chat_model
 
-def run_review_llama_factory(mmd_file_path,args,chat_model):
+def run_review_llama_factory(paper_file_path,args,chat_model):
     infer_modelname = args.model_name_or_path.split('/')[-2]
     infer_save_path = "./" + infer_modelname + '/'
     print(infer_modelname)
     if not os.path.exists(infer_save_path):
         os.mkdir(infer_save_path)
-    res = infer_one(mmd_file_path,chat_model)
+    res = infer_one(paper_file_path,chat_model)
     return res

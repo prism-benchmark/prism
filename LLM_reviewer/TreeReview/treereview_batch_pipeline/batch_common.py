@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 
-REQUIRED_MANIFEST_COLUMNS = ["paper_id", "mmd_path", "reviews_json", "output_dir"]
+REQUIRED_MANIFEST_COLUMNS = ["paper_id", "paper_path", "reviews_json", "output_dir"]
 FINAL_OUTPUT_NAME = "final_output.json"
 STANDARDIZED_REVIEWS_NAME = "standardized_reviews.json"
 LOG_NAME = "log.txt"
@@ -17,7 +17,7 @@ DEFAULT_CHECKPOINT_NAME = "checkpoint.json"
 @dataclass(frozen=True)
 class ManifestRecord:
     paper_id: str
-    mmd_path: str
+    paper_path: str
     reviews_json: str
     output_dir: str
 
@@ -90,7 +90,7 @@ def read_manifest(manifest_path: str) -> List[ManifestRecord]:
             records.append(
                 ManifestRecord(
                     paper_id=(row["paper_id"] or "").strip(),
-                    mmd_path=(row["mmd_path"] or "").strip(),
+                    paper_path=(row["paper_path"] or "").strip(),
                     reviews_json=(row["reviews_json"] or "").strip(),
                     output_dir=(row["output_dir"] or "").strip(),
                 )
@@ -109,7 +109,7 @@ def resolve_manifest_record(record: ManifestRecord, manifest_path: str) -> Manif
 
     return ManifestRecord(
         paper_id=record.paper_id,
-        mmd_path=_resolve(record.mmd_path),
+        paper_path=_resolve(record.paper_path),
         reviews_json=_resolve(record.reviews_json),
         output_dir=_resolve(record.output_dir),
     )

@@ -55,7 +55,7 @@ def get_paper_ids(paper_ids_file: str) -> List[str]:
     return paper_ids
 
 
-def get_mmd_files(input_dir: str, paper_ids: Optional[List[str]] = None) -> dict:
+def get_paper_files(input_dir: str, paper_ids: Optional[List[str]] = None) -> dict:
     """Get text files to process (.grobid.txt format).
     
     Returns dict of {paper_id: file_path}
@@ -367,7 +367,7 @@ def main():
         paper_ids = get_paper_ids(args.paper_ids)
         
         # Get GROBID files
-        grobid_files = get_mmd_files(args.input_dir, paper_ids)
+        grobid_files = get_paper_files(args.input_dir, paper_ids)
         
         if not grobid_files:
             logger.error("No GROBID files found!")

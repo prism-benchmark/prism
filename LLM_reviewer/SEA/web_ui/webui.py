@@ -33,14 +33,14 @@ def qa(pdf_path: str,history:list,progress=gr.Progress()):
     progress(0, desc="Staring")
     print("parsing paper pdf......")
     progress(0.05,desc="Parsing Paper's PDF...")
-    mmd_path = run_parse(pdf_path)
+    paper_path = run_parse(pdf_path)
     progress(0.5,desc="Reviewing Paper...")
     print("reviewing......")
     bot_message = ""
     if args.infer_type == "llama_factory":
-        bot_message = run_review_llama_factory(mmd_path,args,model)
+        bot_message = run_review_llama_factory(paper_path,args,model)
     else:
-        bot_message = run_review_transformers(mmd_path,args,model,tokenizer)
+        bot_message = run_review_transformers(paper_path,args,model,tokenizer)
     progress(1,desc="Finished")
     print("finish")
     history.append(("Please give me the reviews of this paper.", bot_message))

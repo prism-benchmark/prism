@@ -32,7 +32,7 @@ from src.utils import (
     get_paper_pairs,
     load_human_meta_json,
     load_llm_txt,
-    load_paper_mmd,
+    load_paper_grobid,
     load_paper_metadata,
 )
 
@@ -41,7 +41,7 @@ _DATA = os.path.normpath(os.path.join(_HERE, "..", "data"))
 
 HUMAN_FOLDER = os.path.join(_DATA, "Human_and_meta_reviews")
 SEA_FOLDER = os.path.join(_DATA, "SEA_reviews")
-MMD_FOLDER = os.path.join(_DATA, "paper_nougat_mmd")
+PAPERS_FOLDER = os.path.join(_DATA, "grobid_fulltext")
 PAPER_IDS_PATH = os.path.join(_DATA, "data_subset", "paper_ids.txt")
 OUTPUT_DIR = os.path.join(_HERE, "output")
 
@@ -136,7 +136,7 @@ def process_single_paper(
 
     paper_text = None
     if with_paper:
-        paper_text = load_paper_mmd(paper_id, MMD_FOLDER)
+        paper_text = load_paper_grobid(paper_id, PAPERS_FOLDER)
 
     human_reviews: dict[str, str] = {}
     human_list = human_data.get("reviews", []) if isinstance(human_data, dict) else human_data

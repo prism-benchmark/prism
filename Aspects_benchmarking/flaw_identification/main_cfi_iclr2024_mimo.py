@@ -59,7 +59,7 @@ from src.utils import (
     get_paper_pairs_tree,
     load_human_meta_json,
     load_llm_txt,
-    load_paper_mmd,
+    load_paper_content,
     load_tree_review_from_path,
 )
 
@@ -73,7 +73,7 @@ TREE_FOLDER          = os.path.join(ICLR2024_DATA, "tree_iclr2024")
 REVIEWER2_FOLDER     = os.path.join(ICLR2024_DATA, "reviewer2_iclr2024")
 DEEPREVIEW_FOLDER    = os.path.join(ICLR2024_DATA, "deepreview_iclr2024")
 CYCLEREVIEW_FOLDER   = os.path.join(ICLR2024_DATA, "cyclereview_iclr2024")
-MMD_FOLDER           = os.path.join(ICLR2024_DATA, "papers")
+PAPERS_FOLDER        = os.path.join(ICLR2024_DATA, "papers")
 PAPER_IDS_FILE       = os.path.join(ICLR2024_DATA, "paper_ids_50_iclr2024.txt")
 OUTPUT_DIR           = os.path.join(_HERE, "output_cfi_iclr2024_mimo")
 
@@ -169,9 +169,9 @@ def process_single_paper(
 ) -> dict | None:
     print(f"\n--- Processing Paper ID: {paper_id} ---")
 
-    paper_content = load_paper_mmd(paper_id, MMD_FOLDER)
+    paper_content = load_paper_content(paper_id, PAPERS_FOLDER)
     if not paper_content:
-        print(f"  [SKIP] No .mmd file for {paper_id}")
+        print(f"  [SKIP] No paper file for {paper_id}")
         return None
 
     human_data = load_human_meta_json(h_path)

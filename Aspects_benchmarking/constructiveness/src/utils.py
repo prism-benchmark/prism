@@ -21,31 +21,15 @@ def load_llm_txt(filepath: str) -> str:
         return f.read()
 
 
-def load_paper_mmd(paper_id: str, mmd_folder: str) -> Optional[str]:
-    mmd_path = os.path.join(mmd_folder, f"{paper_id}.mmd")
-    if not os.path.exists(mmd_path):
-        print(f"  [WARNING] Missing .mmd file for {paper_id}")
+def load_paper_grobid(paper_id: str, papers_folder: str) -> Optional[str]:
+    """Load paper full text from GROBID-extracted .grobid.txt file."""
+    grobid_path = os.path.join(papers_folder, f"{paper_id}.grobid.txt")
+    if not os.path.exists(grobid_path):
+        print(f"  [WARNING] Missing .grobid.txt file for {paper_id}")
         return None
 
-    with open(mmd_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    parts = content.split("## References")
-    if len(parts) == 1:
-        return content
-
-    core_content = parts[0]
-    tail_content = "## References".join(parts[1:])
-
-    appx_match = re.search(
-        r"\n#+\s*(Appendix|Appendices|Supplementary)\b",
-        tail_content,
-        re.IGNORECASE,
-    )
-    if appx_match:
-        core_content += "\n\n" + tail_content[appx_match.start() :]
-
-    return core_content
+    with open(grobid_path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 def format_human_review_full(review_obj: dict) -> str:

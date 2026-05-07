@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DeepReviewer Pipeline Runner — NEURIPS2025 Dataset
-Iterates over paired .mmd + .json files from separate folders
+Iterates over paired paper text + .json files from separate folders
 
 Usage:
     python run_deepreviewer_neurips2025.py                  # run full pipeline
@@ -103,9 +103,9 @@ def paper_stem(path: Path) -> str:
     return path.stem
 
 
-def list_mmd_files(folder: Path):
+def list_paper_files(folder: Path):
     files = []
-    for pattern in ("*.grobid.txt", "*.txt", "*.mmd"):
+    for pattern in ("*.grobid.txt", "*.txt", "*.grobid.txt"):
         files.extend(folder.glob(pattern))
     # Deduplicate while preserving order
     seen = set()
@@ -157,21 +157,21 @@ def check_environment():
         errors.append(str(exc))
 
     # Check data folders
-    mmd_folder  = Path(deepreviewer_config.MMD_FOLDER)
+    papers_folder  = Path(deepreviewer_config.PAPERS_FOLDER)
     json_folder = Path(deepreviewer_config.JSON_FOLDER)
 
-    if not mmd_folder.exists():
-        errors.append(f"MMD_FOLDER not found: {deepreviewer_config.MMD_FOLDER}")
+    if not papers_folder.exists():
+        errors.append(f"PAPERS_FOLDER not found: {deepreviewer_config.PAPERS_FOLDER}")
     if not json_folder.exists():
         errors.append(f"JSON_FOLDER not found: {deepreviewer_config.JSON_FOLDER}")
 
-    if mmd_folder.exists() and json_folder.exists():
-        mmd_files  = list_mmd_files(mmd_folder)
+    if papers_folder.exists() and json_folder.exists():
+        paper_files  = list_paper_files(papers_folder)
         json_files = list(json_folder.glob("*.json"))
-        mmd_stems  = {paper_stem(f) for f in mmd_files}
+        paper_stems  = {paper_stem(f) for f in paper_files}
         json_stems = {f.stem for f in json_files}
-        paired     = mmd_stems & json_stems
-        log(f"✓ MMD_FOLDER : {len(mmd_files)} .mmd files")
+        paired     = paper_stems & json_stems
+        log(f"✓ PAPERS_FOLDER : {len(paper_files)} paper text files")
         log(f"✓ JSON_FOLDER: {len(json_files)} .json files")
         log(f"✓ Paired     : {len(paired)} papers")
         if len(paired) == 0:
@@ -206,12 +206,12 @@ def load_paper_ids_filter():
 
 
 def get_paired_files(paper_ids_filter=None):
-    mmd_files  = {paper_stem(f): f for f in list_mmd_files(Path(deepreviewer_config.MMD_FOLDER))}
+    paper_files  = {paper_stem(f): f for f in list_paper_files(Path(deepreviewer_config.PAPERS_FOLDER))}
     json_files = {f.stem: f for f in Path(deepreviewer_config.JSON_FOLDER).glob("*.json")}
     
     paired = [
-        (stem, mmd_files[stem], json_files[stem])
-        for stem in sorted(mmd_files)
+        (stem, paper_files[stem], json_files[stem])
+        for stem in sorted(paper_files)
         if stem in json_files
     ]
     
@@ -234,9 +234,9 @@ def analyze_cutoff(text):
     return text[:cutoff_match.start()].rstrip(), cutoff_heading
 
 
-def load_paper(mmd_path):
+def load_paper(paper_path):
     """Load paper, cutting off at References or Appendix to reduce input tokens."""
-    with open(mmd_path, "r", encoding="utf-8") as f:
+    with open(paper_path, "r", encoding="utf-8") as f:
         text = f.read()
 
     paper_text, _ = analyze_cutoff(text)
@@ -422,7 +422,7 @@ if __name__ == "__main__":
             batch_papers = paired_files[batch_idx:batch_idx + batch_size]
             log(f"\n── Batch [{batch_idx+1}-{min(batch_idx+batch_size, len(paired_files))}/{len(paired_files)}] ──────────────────")
             
-            for idx_in_batch, (paper_id, mmd_path, json_path) in enumerate(batch_papers, 1):
+            for idx_in_batch, (paper_id, paper_path, json_path) in enumerate(batch_papers, 1):
                 paper_idx = batch_idx + idx_in_batch
                 log(f"\n  [{paper_idx}/{len(paired_files)}] {paper_id}")
 
@@ -432,7 +432,7 @@ if __name__ == "__main__":
                     continue
 
                 try:
-                    with open(mmd_path, "r", encoding="utf-8") as f:
+                    with open(paper_path, "r", encoding="utf-8") as f:
                         raw_paper_text = f.read()
                     paper_text, cutoff_heading = analyze_cutoff(raw_paper_text)
                     paper_tokens = count_text_tokens(paper_text, reviewer.tokenizer)

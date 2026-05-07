@@ -5,7 +5,7 @@ Data paths  : <DATA_ROOT>/ICLR2026/
 Default LLM : Google Gemini 2.5 Flash Lite  (google-genai library)
 
 Key differences from ICLR 2024:
-  - Paper files are .txt  (plain-text extraction, not Nougat .mmd)
+  - Paper files are .txt  (plain-text extraction)
   - Human reviews include a 'Limitations' field → included in review text
   - SEA reviews have extra sections (Soundness, Rating, Paper Decision)
     → only Summary / Weaknesses / Questions are passed to the model
@@ -143,7 +143,7 @@ def process_single_paper(
 ) -> dict | None:
     print(f"\n--- Processing Paper ID: {paper_id} ---")
 
-    # Load paper content (tries .txt first for ICLR 2026, then .grobid.txt, .mmd)
+    # Load paper content (tries .grobid.txt first, then .txt)
     paper_content = load_paper_content(paper_id, PAPERS_FOLDER)
     if not paper_content:
         print(f"  [SKIP] No paper file for {paper_id}")

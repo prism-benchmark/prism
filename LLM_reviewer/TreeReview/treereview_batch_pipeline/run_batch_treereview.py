@@ -44,7 +44,7 @@ def setup_batch_logger(log_path: str) -> logging.Logger:
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Batch runner for TreeReview without modifying TreeReview core logic.")
-    parser.add_argument("--manifest", required=True, help="CSV with columns: paper_id,mmd_path,reviews_json,output_dir")
+    parser.add_argument("--manifest", required=True, help="CSV with columns: paper_id,paper_path,reviews_json,output_dir")
     parser.add_argument("--status-csv", default=None, help="Path to status.csv. Defaults to <manifest_dir>/status.csv")
     parser.add_argument("--batch-log", default=None, help="Path to batch log. Defaults to <manifest_dir>/batch.log")
     parser.add_argument("--num-workers", type=int, default=1)
@@ -80,7 +80,7 @@ def worker_entry(payload: Tuple[ManifestRecord, BatchConfig]):
     record, config = payload
     return run_one_paper(
         paper_id=record.paper_id,
-        mmd_path=record.mmd_path,
+        paper_path=record.paper_path,
         reviews_json=record.reviews_json,
         output_dir=record.output_dir,
         config=config,

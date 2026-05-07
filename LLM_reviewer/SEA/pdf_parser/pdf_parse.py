@@ -36,10 +36,10 @@ def parse(file, output_dir, ifrm):
 
 def run_parse(pdf_path):
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    mmd_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"nougat_mmd")
+    papers_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),"nougat_output")
     file_name, file_extension = os.path.splitext(os.path.basename(pdf_path))
-    save_path = os.path.join(mmd_dir,file_name + '.mmd')
-    parse(pdf_path, mmd_dir , ifrm=False)
+    save_path = os.path.join(papers_dir,file_name + '.grobid.txt')
+    parse(pdf_path, papers_dir , ifrm=False)
     return save_path
 
 if __name__=='__main__':

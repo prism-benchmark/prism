@@ -6,7 +6,7 @@ This package keeps the **TreeReview core logic** inside `treereview/` and adds o
 - `treereview/core.py`
 - `treereview/agents/*`
 - `treereview/prompts/*`
-- TreeReview generation still uses **only** `.mmd` paper text.
+- TreeReview generation still uses **only** paper text (`.grobid.txt`).
 
 ## What the wrapper adds
 - manifest-driven batch execution
@@ -28,7 +28,7 @@ project/
   example_manifest.csv
   requirements.txt
   sample_inputs/
-    0A5o6dCKeK.mmd
+    0A5o6dCKeK.grobid.txt
     0A5o6dCKeK.json
 ```
 
@@ -36,7 +36,7 @@ project/
 
 `manifest.csv` must contain:
 - `paper_id`
-- `mmd_path`
+- `paper_path`
 - `reviews_json`
 - `output_dir`
 
@@ -47,7 +47,7 @@ Paths may be absolute or relative to the manifest file.
 ```bash
 python run_one_paper.py \
   --paper-id 0A5o6dCKeK \
-  --mmd-path sample_inputs/0A5o6dCKeK.mmd \
+  --paper-path sample_inputs/0A5o6dCKeK.grobid.txt \
   --reviews-json sample_inputs/0A5o6dCKeK.json \
   --output-dir outputs/0A5o6dCKeK
 ```

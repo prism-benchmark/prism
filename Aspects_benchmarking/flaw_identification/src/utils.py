@@ -14,47 +14,17 @@ def load_llm_txt(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         return f.read()
 
-def load_paper_mmd(paper_id, mmd_folder):
+def load_paper_grobid(paper_id, papers_folder):
     """
-    Đọc file nội dung bài báo (.mmd).
-    Tối ưu: Cắt bỏ "## References" bằng string split siêu tốc, 
-    nhưng vẫn quét và giữ lại Appendix ở phía sau.
+    Load paper full text from GROBID-extracted .grobid.txt file.
     """
-    mmd_path = os.path.join(mmd_folder, f"{paper_id}.mmd")
-    if not os.path.exists(mmd_path):
-        print(f"[WARNING] Missing .mmd file for {paper_id}")
+    grobid_path = os.path.join(papers_folder, f"{paper_id}.grobid.txt")
+    if not os.path.exists(grobid_path):
+        print(f"[WARNING] Missing .grobid.txt file for {paper_id}")
         return None
-        
-    with open(mmd_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
-    # Sử dụng hàm split cơ bản: Nhanh hơn và chính xác 100% theo format của bạn
-    parts = content.split("## References")
-    
-    # Nếu không có chữ "## References" nào (mảng parts chỉ có 1 phần tử)
-    if len(parts) == 1:
-        return content
-        
-    # Nội dung chính là phần đầu tiên trước "## References"
-    core_content = parts[0]
-    
-    # Nội dung đuôi là tất cả những gì nằm sau "## References"
-    # Dùng join trong trường hợp hiếm hoi có nhiều chữ "## References" trong text
-    tail_content = "## References".join(parts[1:])
-    
-    # Quét xem trong phần đuôi có Phụ lục không
-    appx_pattern = r'\n#+\s*(Appendix|Appendices|Supplementary)\b'
-    appx_match = re.search(appx_pattern, tail_content, re.IGNORECASE)
-    
-    if appx_match:
-        # Nếu có Appendix, nối nó vào ngay sau phần core_content
-        appendix_content = tail_content[appx_match.start():]
-        core_content += "\n\n" + appendix_content
-        print(f"  -> Optimized: trimmed References and kept Appendix for paper {paper_id}")
-    else:
-        print(f"  -> Optimized: trimmed the References tail for paper {paper_id}")
-        
-    return core_content
+
+    with open(grobid_path, 'r', encoding='utf-8') as f:
+        return f.read()
 def get_paper_pairs(human_folder, sea_folder):
     """
     Tìm các cặp file (json, txt) trùng tên paper_id.
@@ -446,20 +416,13 @@ def get_paper_pairs_reviewer2(human_folder: str, reviewer2_folder: str):
 def load_paper_content(paper_id: str, papers_folder: str) -> str | None:
     """
     Universal paper loader that tries multiple file extensions:
-      1. {paper_id}.mmd        – Nougat-extracted markdown (ICLR 2024)
-      2. {paper_id}.grobid.txt – GROBID-extracted text    (ICLR 2025)
-      3. {paper_id}.txt        – plain text extraction     (ICLR 2026)
+      1. {paper_id}.grobid.txt – GROBID-extracted text (primary)
+      2. {paper_id}.txt        – plain text extraction (fallback)
 
-    For .mmd files the existing References-trimming logic is applied.
-    For .grobid.txt and .txt files the content is returned as-is
-    (the pipeline already caps input size via step2_max_input_chars).
+    The content is returned as-is (the pipeline already caps input size
+    via step2_max_input_chars).
     """
-    # 1. Try .mmd  (with References trimming)
-    mmd_path = os.path.join(papers_folder, f"{paper_id}.mmd")
-    if os.path.exists(mmd_path):
-        return load_paper_mmd(paper_id, papers_folder)
-
-    # 2. Try .grobid.txt
+    # 1. Try .grobid.txt (primary)
     grobid_path = os.path.join(papers_folder, f"{paper_id}.grobid.txt")
     if os.path.exists(grobid_path):
         with open(grobid_path, 'r', encoding='utf-8') as f:
@@ -467,7 +430,7 @@ def load_paper_content(paper_id: str, papers_folder: str) -> str | None:
         print(f"  -> Loaded GROBID text for {paper_id} ({len(content):,} chars)")
         return content
 
-    # 3. Try .txt
+    # 2. Try .txt (fallback)
     txt_path = os.path.join(papers_folder, f"{paper_id}.txt")
     if os.path.exists(txt_path):
         with open(txt_path, 'r', encoding='utf-8') as f:

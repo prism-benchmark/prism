@@ -103,7 +103,7 @@ Final_LLM_Reviewer_Data/
 │   ├── reviewer2_iclr2024/         # {paper_id}.txt
 │   ├── deepreview_iclr2024/        # {paper_id}.json
 │   ├── cyclereview_iclr2024/       # {paper_id}.json
-│   ├── papers/                     # {paper_id}.mmd  (full paper text)
+│   ├── papers/                     # {paper_id}.grobid.txt  (full paper text)
 │   ├── paper_ids_200_iclr2024.txt  # all 200 paper IDs
 │   └── paper_ids_50_iclr2024.txt   # 50-paper robustness subset
 │

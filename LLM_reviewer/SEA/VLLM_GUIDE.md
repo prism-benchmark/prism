@@ -15,7 +15,7 @@ pip install vllm
 ### Configuration
 Edit `vllm_config.py` to customize:
 - **MODEL_NAME**: HuggingFace model (default: Qwen/Qwen2-7B-Instruct)
-- **INPUT_DIR**: Path to text files (.mmd or .grobid.txt)
+- **INPUT_DIR**: Path to text files (`.grobid.txt` or `.txt`)
 - **PAPER_IDS_FILE**: File with paper IDs to process
 - **OUTPUT_DIR**: Output directory for reviews
 - **BATCH_SIZE**: Increase for faster processing (needs more VRAM)
@@ -124,7 +124,7 @@ MODEL_NAME = "Qwen/Qwen2-7B-Instruct"  # Generally faster than Llama-2
 ```
 
 ### File Paths Not Found
-- Check INPUT_DIR exists with `.mmd` files
+- Check INPUT_DIR exists with `.grobid.txt` files
 - Verify PAPER_IDS_FILE is readable
 - Create OUTPUT_DIR if it doesn't exist
 

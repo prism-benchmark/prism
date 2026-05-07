@@ -22,7 +22,7 @@ import traceback
 from cyclereviewer_config_iclr2026 import (
     MODEL_SIZE, GPU_ID,
     GPU_MEMORY_UTILIZATION, MAX_MODEL_LEN,
-    MMD_FOLDER, JSON_FOLDER,
+    PAPERS_FOLDER, JSON_FOLDER,
     PAPER_IDS_FILE,
     OUTPUT_FOLDER, SUMMARY_FILE, SKIP_COMPLETED,
     HF_HOME, HF_TOKEN,
@@ -66,9 +66,9 @@ def truncate_paper_to_tokens(text: str, tokenizer, max_tokens: int = 16000) -> s
     return truncated_text
 
 
-def load_paper(mmd_path: str) -> str:
+def load_paper(paper_path: str) -> str:
     """Load paper, cutting off at References or Appendix to reduce input tokens."""
-    with open(mmd_path, "r", encoding="utf-8") as f:
+    with open(paper_path, "r", encoding="utf-8") as f:
         text = f.read()
 
     cutoff_markers = [
@@ -116,7 +116,7 @@ def load_paper_ids_filter(all_papers: bool = False):
 def _discover_paper_files(folder: str) -> dict:
     """
     Auto-detect paper text files in a folder.
-    Supports .txt, .grobid.txt, and .mmd extensions.
+    Supports .txt, .grobid.txt.
     Returns {paper_id: file_path}.
     """
     result = {}
@@ -131,14 +131,13 @@ def _discover_paper_files(folder: str) -> dict:
         result[f.stem] = str(f)
     if result:
         return result
-    # Fall back to .mmd
-    for f in Path(folder).glob("*.mmd"):
+    for f in Path(folder).glob("*.grobid.txt"):
         result[f.stem] = str(f)
     return result
 
 
 def get_paper_pairs(paper_ids_filter=None) -> list:
-    paper_files = _discover_paper_files(MMD_FOLDER)
+    paper_files = _discover_paper_files(PAPERS_FOLDER)
     pairs = []
     for paper_id, paper_path in sorted(paper_files.items()):
         json_path = os.path.join(JSON_FOLDER, f"{paper_id}.json")
@@ -221,7 +220,7 @@ def check_environment():
         print("[FAIL] ai_researcher not installed — run: pip install ai_researcher")
         ok = False
 
-    for label, path in [("MMD", MMD_FOLDER), ("JSON", JSON_FOLDER)]:
+    for label, path in [("Papers", PAPERS_FOLDER), ("JSON", JSON_FOLDER)]:
         if os.path.exists(path):
             file_count = len(glob.glob(os.path.join(path, '*')))
             print(f"[OK] {label} folder: {file_count} files")
@@ -284,7 +283,7 @@ def run_pipeline(limit: int = None, all_papers: bool = False):
     results, failed = [], []
     skipped = 0
 
-    for paper_index, (paper_id, mmd_path, json_path) in enumerate(pairs, 1):
+    for paper_index, (paper_id, paper_path, json_path) in enumerate(pairs, 1):
         print(f"\n[{paper_index}/{len(pairs)}] {paper_id}")
 
         if SKIP_COMPLETED and is_completed(paper_id):
@@ -293,7 +292,7 @@ def run_pipeline(limit: int = None, all_papers: bool = False):
             continue
 
         try:
-            paper_text = load_paper(mmd_path)
+            paper_text = load_paper(paper_path)
             # Truncate to safe token limit (16000 tokens safe for model context)
             paper_text = truncate_paper_to_tokens(paper_text, tokenizer, max_tokens=16000)
             

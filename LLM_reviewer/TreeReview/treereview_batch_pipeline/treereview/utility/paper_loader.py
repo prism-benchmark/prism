@@ -5,12 +5,12 @@ from treereview.utility.text_chunker import TextChunker
 
 class PaperLoader:
     def __init__(self, paper_id: str,
-                 mmd_path: str,
+                 paper_path: str,
                  metadata: dict=None,
                  with_appendix: bool=True,
                  chunk_config: dict=None):
         self.paper_id = paper_id
-        self.mmd_path = mmd_path
+        self.paper_path = paper_path
         self.metadata = metadata
         self.with_appendix = with_appendix
         self.chunk_config = chunk_config or {}
@@ -78,7 +78,7 @@ class PaperLoader:
             return appendix_text
 
         chunker = TextChunker()
-        content = load_file(self.mmd_path)
+        content = load_file(self.paper_path)
         if self.with_appendix:
             appendix_content = "\n\n" + get_appendix(content)
         else:

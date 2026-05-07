@@ -44,12 +44,12 @@ MIN_OUTPUT_TOKENS = 4096
 def parse_args():
     parser = argparse.ArgumentParser(description="Reviewer2 Demo - Batch Processing")
     parser.add_argument('--json_path', type=str, default='', help="path to single paper json file")
-    parser.add_argument('--mmd_dir', type=str, default=os.getenv("REVIEWER2_MMD_DIR", "data/paper_nougat_mmd"), 
-                        help="directory with .mmd files to batch process")
+    parser.add_argument('--papers_dir', type=str, default=os.getenv("REVIEWER2_PAPERS_DIR", "data/grobid_fulltext"), 
+                        help="directory with .grobid.txt files to batch process")
     parser.add_argument('--output_dir', type=str, default=os.getenv("REVIEWER2_OUTPUT_DIR", "outputs/reviewer2"),
                         help="directory to save .txt reviews")
     parser.add_argument('--paper_ids', type=str, default='', 
-                        help="Path to paper_ids.txt file to filter which .mmd files to process (optional)")
+                        help="Path to paper_ids.txt file to filter which .grobid.txt files to process (optional)")
     parser.add_argument('--use_vllm', action='store_true', help="Use vLLM for faster inference (experimental)")
     parser.add_argument('--batch_size', type=int, default=1,
                         help="Batch size (only works with vLLM)")
@@ -216,75 +216,7 @@ def calculate_max_new_tokens(input_token_count: int, base_max_output: int) -> in
 
 
 
-# ==================== MMD to JSON Converter ====================
-def _clean_body(text: str) -> str:
-    """Remove Nougat artefacts (lone figure labels, page-break lines, etc.)."""
-    lines = text.splitlines()
-    cleaned = []
-    for line in lines:
-        stripped = line.strip()
-        if re.match(r'^(Figure|Table|Fig\.?)\s+\d+', stripped) and len(stripped.split()) <= 8:
-            continue
-        cleaned.append(line)
-    return '\n'.join(cleaned).strip()
 
-
-def _build_metadata(title, abstract_text, sections):
-    return {
-        "metadata": {
-            "title": title,
-            "abstractText": abstract_text,
-            "sections": sections
-        }
-    }
-
-
-def parse_mmd(text: str) -> dict:
-    """Parse a Nougat MMD string into {title, abstractText, sections}."""
-    lines = text.splitlines()
-
-    # ── 1. Title: first line starting with a single '# ' ──────────────────
-    title = "N/A"
-    title_line_idx = 0
-    for i, line in enumerate(lines):
-        if re.match(r'^#\s+\S', line):
-            title = line.lstrip('#').strip()
-            title_line_idx = i
-            break
-
-    # ── 2. Split remaining text into blocks at every heading ───────────────
-    remaining = '\n'.join(lines[title_line_idx + 1:])
-    heading_pattern = re.compile(r'^(#{1,6})\s+(.+)', re.MULTILINE)
-    splits = list(heading_pattern.finditer(remaining))
-
-    abstract_text = "N/A"
-    sections = []
-
-    if not splits:
-        abstract_text = remaining.strip() or "N/A"
-        return _build_metadata(title, abstract_text, sections)
-
-    for idx, match in enumerate(splits):
-        hashes = match.group(1)
-        heading = match.group(2).strip()
-        start = match.end()
-        end = splits[idx + 1].start() if idx + 1 < len(splits) else len(remaining)
-
-        body = remaining[start:end].strip()
-        body = _clean_body(body)
-
-        if re.search(r'\bAbstract\b', heading, re.IGNORECASE) and len(hashes) >= 3:
-            abstract_text = body if body else "N/A"
-        else:
-            sections.append({
-                "heading": heading,
-                "text": body if body else "N/A"
-            })
-
-    return _build_metadata(title, abstract_text, sections)
-
-
-# ==================== END MMD Converter ====================
 
 
 if __name__ == '__main__':
@@ -645,25 +577,25 @@ if __name__ == '__main__':
 
     # ==========Batch Processing or Single File==========
     
-    if args.mmd_dir and Path(args.mmd_dir).exists():
-        # Batch mode: process all .mmd files (or filtered by paper_ids)
-        all_mmd_files = sorted(glob.glob(str(Path(args.mmd_dir) / "*.mmd")))
+    if args.papers_dir and Path(args.papers_dir).exists():
+        # Batch mode: process all .grobid.txt files (or filtered by paper_ids)
+        all_paper_files = sorted(glob.glob(str(Path(args.papers_dir) / "*.grobid.txt")))
         
         # Load paper IDs if provided
         paper_ids = None
         if args.paper_ids and Path(args.paper_ids).exists():
             with open(args.paper_ids, 'r', encoding='utf-8') as f:
                 paper_ids = set(line.strip() for line in f if line.strip())
-            # Filter mmd files by paper_ids
-            mmd_files = [f for f in all_mmd_files if Path(f).stem in paper_ids]
-            print(f"Loaded {len(paper_ids)} paper IDs → Found {len(mmd_files)} matching .mmd files")
+            # Filter paper files by paper_ids
+            paper_files = [f for f in all_paper_files if Path(f).stem in paper_ids]
+            print(f"Loaded {len(paper_ids)} paper IDs → Found {len(paper_files)} matching .grobid.txt files")
         else:
-            mmd_files = all_mmd_files
-            print(f"No paper_ids filter provided → Processing all {len(mmd_files)} .mmd files")
+            paper_files = all_paper_files
+            print(f"No paper_ids filter provided → Processing all {len(paper_files)} .grobid.txt files")
         
         print(f"\n{'='*70}")
-        print(f"BATCH MODE: Processing {len(mmd_files)} .mmd files")
-        print(f"Input:  {args.mmd_dir}")
+        print(f"BATCH MODE: Processing {len(paper_files)} .grobid.txt files")
+        print(f"Input:  {args.papers_dir}")
         print(f"Output: {args.output_dir}")
         print(f"Backend: {'vLLM' if use_vllm else 'Transformers'}")
         if args.skip_existing:
@@ -680,47 +612,53 @@ if __name__ == '__main__':
         skipped_count = 0
         failed_files = []
         
-        for i, mmd_file in enumerate(mmd_files, 1):
+        for i, paper_file in enumerate(paper_files, 1):
             # ===== CHECK: Paper already processed? =====
-            output_file = output_dir / f"{Path(mmd_file).stem}.txt"
+            output_file = output_dir / f"{Path(paper_file).stem}.txt"
             
             if output_file.exists() and not args.force_reprocess:
                 # Already exists, skip it
                 skipped_count += 1
-                print(f"[{i}/{len(mmd_files)}] ⊘ SKIP (already exists): {Path(mmd_file).name}")
+                print(f"[{i}/{len(paper_files)}] ⊘ SKIP (already exists): {Path(paper_file).name}")
                 continue
             elif output_file.exists() and args.force_reprocess:
                 # Exists but force reprocess
-                print(f"[{i}/{len(mmd_files)}] ↻ REPROCESS (overwriting): {Path(mmd_file).name}")
+                print(f"[{i}/{len(paper_files)}] ↻ REPROCESS (overwriting): {Path(paper_file).name}")
             else:
                 # Not exists, process normally
-                print(f"[{i}/{len(mmd_files)}] → Processing: {Path(mmd_file).name}")
+                print(f"[{i}/{len(paper_files)}] → Processing: {Path(paper_file).name}")
             
             try:
-                # Convert .mmd to JSON
-                with open(mmd_file, 'r', encoding='utf-8', errors='ignore') as f:
-                    mmd_text = f.read()
-                paper_data = parse_mmd(mmd_text)
+                # Read paper text and wrap into expected structure
+                with open(paper_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    paper_text = f.read()
+                paper_data = {
+                    "metadata": {
+                        "title": Path(paper_file).stem,
+                        "abstractText": paper_text,
+                        "sections": [],
+                    }
+                }
                 
                 # Process paper (pass appropriate backend)
                 if use_vllm:
-                    process_paper(paper_data, mmd_file, model=None, tokenizer=tokenizer, llm=llm, output_dir=args.output_dir)
+                    process_paper(paper_data, paper_file, model=None, tokenizer=tokenizer, llm=llm, output_dir=args.output_dir)
                 else:
-                    process_paper(paper_data, mmd_file, model=model, tokenizer=tokenizer, llm=None, output_dir=args.output_dir)
+                    process_paper(paper_data, paper_file, model=model, tokenizer=tokenizer, llm=None, output_dir=args.output_dir)
                 success_count += 1
                 
             except Exception as e:
-                print(f"✗ ERROR processing {Path(mmd_file).name}: {str(e)}")
+                print(f"✗ ERROR processing {Path(paper_file).name}: {str(e)}")
                 failed_count += 1
-                failed_files.append((Path(mmd_file).name, str(e)))
+                failed_files.append((Path(paper_file).name, str(e)))
         
         print(f"\n{'='*70}")
         print(f"BATCH PROCESSING COMPLETE")
         print(f"{'='*70}")
-        print(f"✓ Successful: {success_count}/{len(mmd_files)}")
-        print(f"✗ Failed: {failed_count}/{len(mmd_files)}")
-        print(f"⊘ Skipped: {skipped_count}/{len(mmd_files)}")
-        print(f"Total processed: {success_count + failed_count}/{len(mmd_files)}")
+        print(f"✓ Successful: {success_count}/{len(paper_files)}")
+        print(f"✗ Failed: {failed_count}/{len(paper_files)}")
+        print(f"⊘ Skipped: {skipped_count}/{len(paper_files)}")
+        print(f"Total processed: {success_count + failed_count}/{len(paper_files)}")
         if failed_files:
             print(f"\nFailed files:")
             for fname, err in failed_files:
@@ -745,7 +683,7 @@ if __name__ == '__main__':
         
     else:
         print(f"\nERROR: Must provide either:")
-        print(f"  --mmd_dir (default: {args.mmd_dir})")
+        print(f"  --papers_dir (default: {args.papers_dir})")
         print(f"  --json_path (for single file mode)")
         print(f"\nUsage:")
         print(f"  # Batch with vLLM - ALL papers:")
@@ -755,7 +693,7 @@ if __name__ == '__main__':
         print(f"  python demo.py --use_vllm --batch_size 4 --paper_ids data_subset/paper_ids.txt")
         print(f"  ")
         print(f"  # Batch with Transformers:")
-        print(f"  python demo.py --mmd_dir /path/to/mmd --output_dir /path/to/output")
+        print(f"  python demo.py --papers_dir /path/to/papers --output_dir /path/to/output")
         print(f"  ")
         print(f"  # Single file mode:")
         print(f"  python demo.py --json_path paper.json\n")

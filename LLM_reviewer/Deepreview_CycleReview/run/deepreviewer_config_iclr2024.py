@@ -25,7 +25,7 @@ REVIEWER_NUM           = 1          # 3 reviewers + 1 meta review (auto)
 
 # --- Dataset Folders ---
 DATA_ROOT = os.getenv("DATA_ROOT", "/path/to/data")
-MMD_FOLDER  = os.getenv("DEEPREVIEWER_MMD_FOLDER", os.path.join(DATA_ROOT, "ICLR2024", "paper_nougat_mmd"))
+PAPERS_FOLDER  = os.getenv("DEEPREVIEWER_PAPERS_FOLDER", os.path.join(DATA_ROOT, "ICLR2024", "grobid_fulltext"))
 JSON_FOLDER = os.getenv("DEEPREVIEWER_JSON_FOLDER", os.path.join(DATA_ROOT, "ICLR2024", "Human_and_meta_reviews"))
 
 # --- Paper Selection ---

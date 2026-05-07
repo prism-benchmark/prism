@@ -6,7 +6,7 @@ Default LLM : Mimo v2.5 Pro  (OpenAI-compatible API)
 Paper IDs   : paper_ids_50_iclr2025.txt  (50-paper subset)
 
 Key differences from ICLR 2024:
-  - Paper files are .grobid.txt  (GROBID-extracted text, not Nougat .mmd)
+  - Paper files are .grobid.txt  (GROBID-extracted text)
   - Human reviews include a 'Limitations' field → included in review text
   - SEA reviews have extra sections → only Summary / Weaknesses / Questions passed
 

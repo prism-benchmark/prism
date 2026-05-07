@@ -10,7 +10,7 @@ class PhaseInputAdapter:
     Thin adapter between the upstream preparation pipeline and TreeReview.
 
     Design rule:
-    - TreeReview generation consumes only parsed paper text (.mmd).
+    - TreeReview generation consumes only parsed paper text.
     - Human reviews are standardized and attached to outputs for evaluation,
       but are never injected into TreeReview prompts.
     """
@@ -39,9 +39,9 @@ class PhaseInputAdapter:
         ],
     }
 
-    def __init__(self, paper_id: str, mmd_path: str, reviews_json_path: str):
+    def __init__(self, paper_id: str, paper_path: str, reviews_json_path: str):
         self.paper_id = paper_id
-        self.mmd_path = str(mmd_path)
+        self.paper_path = str(paper_path)
         self.reviews_json_path = str(reviews_json_path)
 
     def build_bundle(self, paper: Paper) -> Dict[str, Any]:
@@ -50,7 +50,7 @@ class PhaseInputAdapter:
         return {
             "paper_id": self.paper_id,
             "paper_input": {
-                "mmd_path": self.mmd_path,
+                "paper_path": self.paper_path,
                 "title": paper.title,
                 "abstract": paper.abstract,
                 "toc": paper.toc,

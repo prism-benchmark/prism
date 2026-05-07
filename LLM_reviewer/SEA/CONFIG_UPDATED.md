@@ -14,8 +14,8 @@ All vLLM scripts can be configured for an ICLR-style `grobid_fulltext` dataset:
    - BATCH_SIZE: 16 (increased for faster processing)
 
 2. **run_review_vllm.py**
-   - Updated `get_mmd_files()` to auto-detect `.grobid.txt` files
-   - Handles both `.mmd` and `.grobid.txt` formats
+   - Updated `get_paper_files()` to auto-detect `.grobid.txt` files
+   - Handles `.grobid.txt` and `.txt` formats
    - Default argument updated for new paths
 
 3. **Documentation**
@@ -43,7 +43,7 @@ bash run_vllm.sh
 ## Key Features
 
 - ✅ Auto-detects `.grobid.txt` files
-- ✅ Falls back to `.mmd` if needed
+- ✅ Falls back to `.txt` if `.grobid.txt` not found
 - ✅ Batch processing (16 papers at a time)
 - ✅ GPU optimization for fast inference
 - ✅ Resume support (skips completed papers)

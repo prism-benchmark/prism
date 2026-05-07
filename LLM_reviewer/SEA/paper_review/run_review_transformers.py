@@ -8,10 +8,10 @@ import torch
 from paper_review.utils import *
 
 
-def infer_one(mmd_file_path,chat_model,tokenizer):
+def infer_one(paper_file_path,chat_model,tokenizer):
     system_prompt_dict = read_json_file(os.path.join(os.path.dirname(os.path.abspath(__file__)),"template.json"))
     instruction = system_prompt_dict['instruction_e']
-    paper = read_txt_file(mmd_file_path)
+    paper = read_txt_file(paper_file_path)
     idx = paper.find("## References")
     paper = paper[:idx].strip()
     
@@ -45,11 +45,11 @@ def init_model_transformers(args):
     chat_model.to(get_device())
     return chat_model,tokenizer
 
-def run_review_transformers(mmd_file_path,args,chat_model,tokenizer):
+def run_review_transformers(paper_file_path,args,chat_model,tokenizer):
     infer_modelname = args.model_name_or_path.split('/')[-2]
     infer_save_path = "./" + infer_modelname + '/'
     print(infer_modelname)
     if not os.path.exists(infer_save_path):
         os.mkdir(infer_save_path)
-    res = infer_one(mmd_file_path,chat_model,tokenizer)
+    res = infer_one(paper_file_path,chat_model,tokenizer)
     return res

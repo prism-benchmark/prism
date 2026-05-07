@@ -64,12 +64,12 @@ def initialize_worker_resources(config: RuntimeConfig) -> None:
     _WORKER_CONFIG = config
 
 
-def load_paper(paper_id: str, mmd_path: str, chunk_size: int):
+def load_paper(paper_id: str, paper_path: str, chunk_size: int):
     from treereview.utility.paper_loader import PaperLoader
 
     loader = PaperLoader(
         paper_id=paper_id,
-        mmd_path=mmd_path,
+        paper_path=paper_path,
         chunk_config={"chunk_size": chunk_size},
     )
     return loader.get_paper()
@@ -77,7 +77,7 @@ def load_paper(paper_id: str, mmd_path: str, chunk_size: int):
 
 def run_one_paper(
     paper_id: str,
-    mmd_path: str,
+    paper_path: str,
     reviews_json: str,
     output_dir: str,
     config: RuntimeConfig,
@@ -107,13 +107,13 @@ def run_one_paper(
     started_at = utc_now_iso()
     start_ts = time.time()
     logger.info("Starting paper_id=%s", paper_id)
-    logger.info("Inputs: mmd=%s | reviews=%s | output_dir=%s", mmd_path, reviews_json, output_dir)
+    logger.info("Inputs: paper=%s | reviews=%s | output_dir=%s", paper_path, reviews_json, output_dir)
     try:
         initialize_worker_resources(config)
         assert _WORKER_RESOURCES is not None
 
-        paper = load_paper(paper_id=paper_id, mmd_path=mmd_path, chunk_size=config.chunk_size)
-        adapter = PhaseInputAdapter(paper_id=paper_id, mmd_path=mmd_path, reviews_json_path=reviews_json)
+        paper = load_paper(paper_id=paper_id, paper_path=paper_path, chunk_size=config.chunk_size)
+        adapter = PhaseInputAdapter(paper_id=paper_id, paper_path=paper_path, reviews_json_path=reviews_json)
         bundle = adapter.build_bundle(paper)
         standardized_reviews = bundle["human_reviews"]
         if config.save_standardized_reviews:
@@ -141,7 +141,7 @@ def run_one_paper(
         tree_review_result = pipeline.run()
         metadata = {
             "paper_id": paper_id,
-            "input_paths": {"mmd_path": mmd_path, "reviews_json": reviews_json},
+            "input_paths": {"paper_path": paper_path, "reviews_json": reviews_json},
             "output_dir": output_dir,
             "checkpoint_path": checkpoint_path,
             "config": {
@@ -203,7 +203,7 @@ def run_one_paper(
 def parse_args():
     parser = argparse.ArgumentParser(description="Run TreeReview for one paper without changing TreeReview core logic.")
     parser.add_argument("--paper-id", required=True)
-    parser.add_argument("--mmd-path", required=True)
+    parser.add_argument("--paper-path", required=True)
     parser.add_argument("--reviews-json", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--max-depth", type=int, default=4)
@@ -220,7 +220,7 @@ def main():
     args = parse_args()
     result = run_one_paper(
         paper_id=args.paper_id,
-        mmd_path=args.mmd_path,
+        paper_path=args.paper_path,
         reviews_json=args.reviews_json,
         output_dir=args.output_dir,
         config=RuntimeConfig(

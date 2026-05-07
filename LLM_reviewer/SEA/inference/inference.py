@@ -36,10 +36,10 @@ def get_subfile(path):
     subfiles = [d for d in os.listdir(path) if os.path.isfile(os.path.join(path, d))]
     return subfiles
 
-def infer_one(mmd_file_path):
+def infer_one(paper_file_path):
     system_prompt_dict = read_json_file(os.path.join(os.path.dirname(os.path.abspath(__file__)),"template.json"))
     instruction = system_prompt_dict['instruction_e']
-    paper = read_txt_file(mmd_file_path)
+    paper = read_txt_file(paper_file_path)
     idx = paper.find("## References")
     paper = paper[:idx].strip()
     # prompt = instruction + '\n' + paper
@@ -55,19 +55,19 @@ def infer_one(mmd_file_path):
     response = tokenizer.batch_decode(generated_ids[: , len_input:])[0]
     return response
 
-def run_review(mmd_file_path):
+def run_review(paper_file_path):
     infer_modelname = model_name.split('/')[-2]
     infer_save_path = "./" + infer_modelname + '/'
     print(infer_modelname)
     if not os.path.exists(infer_save_path):
         os.mkdir(infer_save_path)
-    res = infer_one(mmd_file_path)
+    res = infer_one(paper_file_path)
     return res
 
 
 if __name__ == "__main__":
     # 1. Đường dẫn thư mục Input và Output
-    input_dir = os.getenv("SEA_INPUT_DIR", "data/papers_mmd")
+    input_dir = os.getenv("SEA_INPUT_DIR", "data/papers")
     output_dir = os.getenv("SEA_OUTPUT_DIR", "outputs/sea_iclr2024")
     
     # Tự động tạo thư mục output nếu chưa có
@@ -82,8 +82,8 @@ if __name__ == "__main__":
     
     # 3. Lặp qua từng file để review
     for file_name in tqdm(files, desc="Đang review các papers"):
-        if file_name.endswith(".mmd"):
-            data_id = file_name.replace(".mmd", "")
+        if file_name.endswith(".grobid.txt"):
+            data_id = file_name.replace(".grobid.txt", "")
             
             # --- TÍNH NĂNG CHECK OUTPUT (BỎ QUA FILE ĐÃ CHẠY) ---
             out_file_path = os.path.join(output_dir, data_id + ".txt")

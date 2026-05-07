@@ -130,8 +130,6 @@ def discover_papers(data_root: Path, conf: dict, review_type: str = "human") -> 
                 paper_file = paper_dir / (paper_id + ".txt")
             if not paper_file.exists():
                 paper_file = paper_dir / (paper_id + ".grobid.txt")
-            if not paper_file.exists():
-                paper_file = paper_dir / (paper_id + ".mmd")
             if paper_file.exists():
                 papers.append({
                     "paper_id": paper_id,

@@ -10,7 +10,7 @@ MAX_MODEL_LEN       = 24000  # Model default: 24320, set to 24000 for safety mar
 
 # ── DATA ──────────────────────────────────────────────────────────────────────
 DATA_ROOT           = os.getenv("DATA_ROOT", "/path/to/data")
-MMD_FOLDER          = os.getenv("CYCLEREVIEWER_MMD_FOLDER", os.path.join(DATA_ROOT, "NeurIPS2025", "grobid_fulltext"))
+PAPERS_FOLDER          = os.getenv("CYCLEREVIEWER_PAPERS_FOLDER", os.path.join(DATA_ROOT, "NeurIPS2025", "grobid_fulltext"))
 JSON_FOLDER         = os.getenv("CYCLEREVIEWER_JSON_FOLDER", os.path.join(DATA_ROOT, "NeurIPS2025", "json"))
 
 # ── PAPER SELECTION ───────────────────────────────────────────────────────────
