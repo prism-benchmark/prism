@@ -14,11 +14,31 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
 import sys
+import time
+from pathlib import Path as _Path
 from typing import Any, Optional
 
 from dotenv import dotenv_values, find_dotenv, load_dotenv
+
+# ── Import centralized AI config ─────────────────────────────────────────
+sys.path.insert(0, str(_Path(__file__).parent.parent.parent.parent))
+from ai_config import (  # noqa: E402
+    GOOGLE_API_KEY,
+    GEMINI_MODEL,
+    GPT_MODEL,
+    OPENAI_API_KEY,
+    MIMO_API_KEY,
+    MIMO_MODEL,
+    MIMO_BASE_URL,
+    DEVMATE_API_KEY,
+    DEVMATE_BASE_URL,
+    DEVMATE_PROXY,
+    DEVMATE_DISABLE_SSL_VERIFY,
+    GEMINI_DEVMATE_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    get_provider_config,
+)
 
 _DOTENV_PATH = find_dotenv()
 load_dotenv(_DOTENV_PATH, override=False)
@@ -166,16 +186,16 @@ class UnifiedChatClient:
         self.max_output_tokens = max_output_tokens
 
         if self.provider == "openai":
-            self.model = model or _get_env_value("OPENAI_MODEL") or "gpt-4o-mini"
+            self.model = model or _get_env_value("OPENAI_MODEL") or GPT_MODEL
             self._init_openai(api_key)
         elif self.provider == "gemini":
-            self.model = model or _get_env_value("GEMINI_MODEL") or "models/gemini-2.5-flash-lite"
+            self.model = model or _get_env_value("GEMINI_MODEL") or f"models/{GEMINI_MODEL}"
             self._init_gemini(api_key)
         elif self.provider == "gemini-devmate":
-            self.model = model or _get_env_value("GEMINI_DEVMATE_MODEL", "DEVMATE_MODEL") or "gemini-3-flash-preview"
+            self.model = model or _get_env_value("GEMINI_DEVMATE_MODEL", "DEVMATE_MODEL") or GEMINI_DEVMATE_MODEL
             self._init_gemini_devmate(api_key)
         elif self.provider == "mimo":
-            self.model = model or _get_env_value("MIMO_MODEL") or "mimo-v2.5-pro"
+            self.model = model or _get_env_value("MIMO_MODEL") or MIMO_MODEL
             self._init_mimo(api_key)
 
     # ------------------------------------------------------------------
@@ -185,7 +205,7 @@ class UnifiedChatClient:
     def _init_openai(self, api_key: Optional[str]) -> None:
         try:
             from openai import OpenAI
-            key = api_key or _get_env_value("OPENAI_API_KEY")
+            key = api_key or _get_env_value("OPENAI_API_KEY") or OPENAI_API_KEY
             base_url = _get_env_value("OPENAI_BASE_URL")
             self._openai_client = OpenAI(api_key=key, base_url=base_url)
             print(f"[INFO] UnifiedChatClient: OpenAI ready (model={self.model})", file=sys.stderr)
@@ -215,21 +235,19 @@ class UnifiedChatClient:
         self._devmate_api_key = (
             api_key
             or _get_env_value("GEMINI_DEVMATE_API_KEY", "DEVMATE_API_KEY", "GEMINI_API_KEY")
+            or DEVMATE_API_KEY or GOOGLE_API_KEY
         )
         if not self._devmate_api_key:
             raise RuntimeError(
                 "Missing Devmate API key. Set GEMINI_DEVMATE_API_KEY, DEVMATE_API_KEY, or GEMINI_API_KEY."
             )
 
-        self._devmate_base_url = _get_env_value("DEVMATE_BASE_URL") or "https://devmate.bosch.com/api/v3"
-        # Prefer an explicit Devmate proxy or the known Bosch corporate proxy.
-        # Generic HTTP(S)_PROXY values in local .env files may point to a dead local
-        # proxy (e.g. 127.0.0.1:3128), which breaks Devmate calls.
+        self._devmate_base_url = _get_env_value("DEVMATE_BASE_URL") or DEVMATE_BASE_URL
         self._devmate_proxy = (
             _get_env_value("DEVMATE_PROXY")
-            or "http://rb-proxy-apac.bosch.com:8080"
+            or DEVMATE_PROXY
         )
-        self._devmate_ssl_verify = not _env_flag("DEVMATE_DISABLE_SSL_VERIFY", default=True)
+        self._devmate_ssl_verify = not (_env_flag("DEVMATE_DISABLE_SSL_VERIFY") or DEVMATE_DISABLE_SSL_VERIFY)
         self._devmate_proxy_fallback_used = False
         self._openai_client = self._build_devmate_client(self._devmate_proxy)
         print(
@@ -240,10 +258,10 @@ class UnifiedChatClient:
     def _init_mimo(self, api_key: Optional[str]) -> None:
         try:
             from openai import OpenAI
-            key = api_key or _get_env_value("MIMO_API_KEY")
+            key = api_key or _get_env_value("MIMO_API_KEY") or MIMO_API_KEY
             if not key:
                 raise RuntimeError("MIMO_API_KEY environment variable not set")
-            base_url = _get_env_value("MIMO_BASE_URL") or "https://api.xiaomimimo.com/v1"
+            base_url = _get_env_value("MIMO_BASE_URL") or MIMO_BASE_URL
             self._openai_client = OpenAI(api_key=key, base_url=base_url)
             print(f"[INFO] UnifiedChatClient: Mimo ready (model={self.model}, base_url={base_url})", file=sys.stderr)
         except Exception as exc:
@@ -252,7 +270,7 @@ class UnifiedChatClient:
     def _init_gemini(self, api_key: Optional[str]) -> None:
         try:
             from google import genai
-            key = api_key or _get_env_value("GEMINI_API_KEY", "GOOGLE_API_KEY")
+            key = api_key or _get_env_value("GEMINI_API_KEY", "GOOGLE_API_KEY") or GOOGLE_API_KEY
             if not key:
                 raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable not set")
             self._gemini_client = genai.Client(api_key=key)

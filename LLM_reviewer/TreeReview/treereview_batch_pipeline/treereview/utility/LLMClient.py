@@ -2,7 +2,9 @@ import datetime
 import json
 import os
 import sqlite3
+import sys
 import time
+from pathlib import Path as _Path
 from typing import Any, Dict, List, Optional
 
 import openai
@@ -22,6 +24,15 @@ except Exception:  # pragma: no cover
 
     class CallbackManagerForLLMRun:
         pass
+
+# ── Import centralized AI config ─────────────────────────────────────────
+sys.path.insert(0, str(_Path(__file__).parent.parent.parent.parent.parent))
+from ai_config import (  # noqa: E402
+    GOOGLE_API_KEY,
+    GEMINI_MODEL,
+    GEMINI_TEMP,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+)
 
 load_dotenv()
 
@@ -311,7 +322,10 @@ class LLMClient(LLM):
 
     def __init__(self, **kwargs):
         super().__init__()
-        api_key = kwargs.pop("api_key", None) or os.getenv("GEMINI_API_KEY")
+        api_key = kwargs.pop("api_key", None) or os.getenv("GEMINI_API_KEY") or GOOGLE_API_KEY
+        kwargs.setdefault("default_model", kwargs.get("default_model", GEMINI_MODEL))
+        kwargs.setdefault("default_temperature", kwargs.get("default_temperature", GEMINI_TEMP))
+        kwargs.setdefault("default_max_tokens", kwargs.get("default_max_tokens", DEFAULT_MAX_OUTPUT_TOKENS))
         self.base_client = BaseClient(api_key=api_key, **kwargs)
 
     @property

@@ -1,6 +1,7 @@
 """
 paths_config.py — Centralized path configuration for the Constructiveness pipeline.
 All paths are derived from DATA_ROOT in your root .env file.
+AI model settings are imported from the centralized ai_config.py.
 """
 import os
 import sys
@@ -12,6 +13,13 @@ from env_loader import (
     GOOGLE_API_KEY, GEMINI_MODEL,
     MIMO_API_KEY, MIMO_MODEL, MIMO_BASE_URL,
     validate_env,
+)
+
+# ── Import AI model settings from centralized config ──────────────────────
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from ai_config import (
+    GEMINI_TEMP,
+    MIMO_TEMP,
 )
 
 # ---------------------------------------------------------------------------
@@ -51,9 +59,6 @@ _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR  = os.path.join(_MODULE_DIR, "output")
 
 # ---------------------------------------------------------------------------
-# API / Model settings
+# API / Model settings (imported from ai_config via env_loader)
 # ---------------------------------------------------------------------------
 GEMINI_API_KEY = GOOGLE_API_KEY
-GEMINI_TEMP    = 0.0
-MIMO_TEMP      = 0.0
-

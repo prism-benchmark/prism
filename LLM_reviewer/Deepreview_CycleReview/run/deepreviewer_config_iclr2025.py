@@ -1,4 +1,10 @@
 import os
+import sys
+from pathlib import Path as _Path
+
+# Import centralized AI config
+sys.path.insert(0, str(_Path(__file__).parent.parent.parent.parent))
+from ai_config import HF_TOKEN as _HF_TOKEN, DATA_ROOT as _AI_DATA_ROOT  # noqa: E402
 
 # ============================================================
 # DeepReviewer Pipeline Configuration - ICLR2025
@@ -6,7 +12,7 @@ import os
 # ============================================================
 
 # --- HuggingFace ---
-HF_TOKEN = os.getenv("HF_TOKEN", "YOUR_HF_TOKEN")
+HF_TOKEN = _HF_TOKEN or os.getenv("HF_TOKEN", "YOUR_HF_TOKEN")
 
 # --- Semantic Scholar ---
 # Semantic Scholar API enabled for enhanced paper search and retrieval
@@ -24,7 +30,7 @@ REVIEW_MODE            = "Standard Mode"  # "Fast Mode", "Standard Mode", "Best 
 REVIEWER_NUM           = 1          # 3 reviewers + 1 meta review (auto)
 
 # --- Dataset Folders ---
-DATA_ROOT = os.getenv("DATA_ROOT", "/path/to/data")
+DATA_ROOT = os.getenv("DATA_ROOT", _AI_DATA_ROOT or "/path/to/data")
 PAPERS_FOLDER  = os.getenv("DEEPREVIEWER_PAPERS_FOLDER", os.path.join(DATA_ROOT, "ICLR2025", "grobid_fulltext"))
 JSON_FOLDER = os.getenv("DEEPREVIEWER_JSON_FOLDER", os.path.join(DATA_ROOT, "ICLR2025", "json"))
 
