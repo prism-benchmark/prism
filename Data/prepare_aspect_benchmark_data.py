@@ -227,7 +227,7 @@ def matching_file_count(directory: Path, paper_id: str) -> int:
     patterns = [
         f"{paper_id}.txt",
         f"{paper_id}.json",
-        f"{paper_id}.mmd",
+        f"{paper_id}.grobid.txt",
         f"{paper_id}_review.json",
     ]
     return sum(1 for name in patterns if (directory / name).exists())

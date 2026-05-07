@@ -25,6 +25,7 @@ REPO_TYPE = "dataset"
 REVISION = "main"
 SUBSET_METADATA = "subset_1000.parquet"
 SUBSET_ARCHIVE = "SUBSET_1000.zip"
+SAMPLE_ARCHIVE = "Final_LLM_Reviewer_Data_Sample.zip"
 
 
 def parse_args() -> argparse.Namespace:
