@@ -29,6 +29,15 @@ def _import_fi_module(module_name: str, file_name: str):
     spec.loader.exec_module(mod)
     return mod
 
+# Try centralized client first, fall back to legacy imports
+_CENTRALIZED_AVAILABLE = False
+try:
+    sys.path.insert(0, os.path.normpath(os.path.join(_HERE, "..", "..", "..")))
+    from ai_config import get_llm_client
+    _CENTRALIZED_AVAILABLE = True
+except ImportError:
+    pass
+
 _azure_mod = _import_fi_module("azure_openai_client", "azure_openai_client.py")
 AzureChatClient = _azure_mod.AzureChatClient
 get_default_deployment = _azure_mod.get_default_deployment
@@ -195,14 +204,11 @@ class ConstructivenessEvaluator:
 
     def __init__(
         self,
-        provider: str = "devmate-gemini",
+        provider: str | None = None,
         api_key: str | None = None,
         model: str | None = None,
         auto_adjust_tokens: bool | None = None,
     ):
-        self.provider = provider
-        self.api_key = api_key
-        
         # Determine if auto-adjustment is enabled
         env_auto = os.getenv("CONSTRUCTIVENESS_AUTO_ADJUST_TOKENS", "true").lower()
         if auto_adjust_tokens is not None:
@@ -219,6 +225,27 @@ class ConstructivenessEvaluator:
         self.max_output_tokens = self.base_max_output_tokens
         
         self.deployment = None
+
+        # Use centralized config if available and no explicit provider given
+        if _CENTRALIZED_AVAILABLE and provider is None:
+            try:
+                overrides = {}
+                if model is not None:
+                    overrides["model"] = model
+                _client = get_llm_client("constructiveness", **overrides)
+                self.client = _client
+                self.provider = _client.provider
+                self.deployment = _client.model
+                print(f"[INFO] ConstructivenessEvaluator using centralized config (provider={self.provider}, model={self.deployment})")
+                print(f"[INFO] ConstructivenessEvaluator initialized (auto_adjust_tokens={self.auto_adjust_enabled})")
+                return
+            except Exception as e:
+                print(f"[WARNING] Centralized config failed, falling back: {e}")
+
+        # Legacy path: explicit provider
+        provider = provider or "devmate-gemini"
+        self.provider = provider
+        self.api_key = api_key
 
         if provider == "gemini":
             self.client = UnifiedChatClient(

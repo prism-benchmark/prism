@@ -32,6 +32,8 @@ from ai_config import (  # noqa: E402
     GEMINI_MODEL,
     GEMINI_TEMP,
     DEFAULT_MAX_OUTPUT_TOKENS,
+    get_reviewer_config as _get_reviewer_cfg,
+    get_provider_config as _get_provider_cfg,
 )
 
 load_dotenv()
@@ -322,7 +324,29 @@ class LLMClient(LLM):
 
     def __init__(self, **kwargs):
         super().__init__()
-        api_key = kwargs.pop("api_key", None) or os.getenv("GEMINI_API_KEY") or GOOGLE_API_KEY
+
+        # Try to load reviewer-specific config from llm_config.yaml
+        provider_cfg: Dict[str, Any] = {}
+        try:
+            _rev_cfg = _get_reviewer_cfg("treereview")
+            if _rev_cfg and _rev_cfg.get("type") == "api":
+                provider_cfg = _get_provider_cfg(_rev_cfg.get("provider", "gemini"))
+                base_url = _rev_cfg.get("base_url") or provider_cfg.get("base_url")
+                if base_url:
+                    kwargs.setdefault("base_url", base_url)
+                kwargs.setdefault("default_model", _rev_cfg.get("model") or provider_cfg.get("default_model", GEMINI_MODEL))
+                kwargs.setdefault(
+                    "default_temperature",
+                    _rev_cfg.get("temperature", provider_cfg.get("default_temperature", GEMINI_TEMP)),
+                )
+                kwargs.setdefault(
+                    "default_max_tokens",
+                    _rev_cfg.get("max_tokens", provider_cfg.get("default_max_tokens", DEFAULT_MAX_OUTPUT_TOKENS)),
+                )
+        except Exception:
+            pass
+
+        api_key = kwargs.pop("api_key", None) or provider_cfg.get("api_key") or os.getenv("GEMINI_API_KEY") or GOOGLE_API_KEY
         kwargs.setdefault("default_model", kwargs.get("default_model", GEMINI_MODEL))
         kwargs.setdefault("default_temperature", kwargs.get("default_temperature", GEMINI_TEMP))
         kwargs.setdefault("default_max_tokens", kwargs.get("default_max_tokens", DEFAULT_MAX_OUTPUT_TOKENS))

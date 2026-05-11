@@ -1,31 +1,18 @@
 """
-ai_config.py — Centralized AI/LLM configuration for the entire PRISM project.
+ai_config.py — Thin facade over llm_client.py for backward compatibility.
 
-Single source of truth for:
-  - API keys (Gemini, OpenAI, Azure OpenAI, Mimo, HuggingFace, Semantic Scholar)
-  - Model names and IDs for each provider
-  - Default inference parameters (temperature, max tokens, top_p)
-  - Provider base URLs
+All configuration lives in llm_config.yaml. All logic lives in llm_client.py.
+This module re-exports everything and provides legacy constants for code that
+imports from ai_config directly.
 
-Both Aspects_benchmarking and LLM_reviewer import from here.
+Quick start (new code — prefer this):
+    from llm_client import PRISMLLMClient, get_aspect_config, list_enabled
 
-Usage:
+Legacy (still works):
     from ai_config import (
-        # API keys
-        GOOGLE_API_KEY, OPENAI_API_KEY, AZURE_OPENAI_API_KEY,
-        MIMO_API_KEY, HF_TOKEN, SEMANTIC_SCHOLAR_API_KEYS,
-        # Model names
-        GEMINI_MODEL, GPT_MODEL, MIMO_MODEL, AZURE_OPENAI_DEPLOYMENT,
-        # Inference defaults
-        GEMINI_TEMP, GPT_TEMP, MIMO_TEMP, DEFAULT_MAX_OUTPUT_TOKENS,
-        # Base URLs
-        MIMO_BASE_URL, AZURE_OPENAI_ENDPOINT,
-        # Provider config dicts (for UnifiedChatClient / LLMClient)
-        get_provider_config,
+        GOOGLE_API_KEY, OPENAI_API_KEY, GEMINI_MODEL, GPT_MODEL,
+        get_provider_config, get_llm_client, validate_env,
     )
-
-To override any value: set the corresponding environment variable in .env
-at the repo root. See .env.example for the full list.
 """
 
 from __future__ import annotations
@@ -40,27 +27,114 @@ try:
     from dotenv import load_dotenv
     load_dotenv(_REPO_ROOT / ".env", override=False)
 except ImportError:
-    pass  # dotenv optional; fall back to os.environ
+    pass
+
+# ── Re-export everything from llm_client ──────────────────────────────────
+from llm_client import (  # noqa: F401
+    # Config loaders
+    load_llm_config,
+    reset_llm_config_cache,
+    get_aspect_config,
+    get_reviewer_config,
+    get_provider_credentials,
+    get_provider_defaults,
+    get_referenced_api_providers,
+    # Enable/disable & profiles
+    is_enabled,
+    list_all,
+    list_enabled,
+    list_disabled,
+    get_profile_names,
+    get_profile_items,
+    resolve_items,
+    # Client
+    PRISMLLMClient,
+)
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _as_int(value: Any, default: int) -> int:
+    if value is None or value == "":
+        return default
+    return int(value)
+
+
+def _as_float(value: Any, default: float) -> float:
+    if value is None or value == "":
+        return default
+    return float(value)
+
+
+def _provider_name(provider: str) -> str:
+    from llm_client import _normalize_provider_name
+    return _normalize_provider_name(provider)
+
+
+def _provider_credentials(provider: str) -> Dict[str, Any]:
+    try:
+        return get_provider_credentials(_provider_name(provider))
+    except Exception:
+        return {}
+
+
+def _provider_defaults(provider: str) -> Dict[str, Any]:
+    try:
+        return get_provider_defaults(_provider_name(provider))
+    except Exception:
+        return {}
+
+
+def _legacy_provider_config(provider: str) -> Dict[str, Any]:
+    normalized = _provider_name(provider)
+    creds = _provider_credentials(normalized)
+    defaults = _provider_defaults(normalized)
+    base_url = creds.get("base_url") or creds.get("endpoint")
+    default_model = (
+        defaults.get("default_model")
+        or creds.get("deployment")
+        or load_llm_config().get("defaults", {}).get("model")
+        or ""
+    )
+    return {
+        "api_key": creds.get("api_key", ""),
+        "base_url": base_url,
+        "default_model": default_model,
+        "default_temperature": _as_float(defaults.get("default_temperature"), 0.0),
+        "default_max_tokens": _as_int(defaults.get("default_max_tokens"), 4096),
+    }
 
 
 # ============================================================================
-# API Keys
+# Legacy API Keys (module-level constants)
 # ============================================================================
 
 # Google / Gemini
-GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+GOOGLE_API_KEY: str = str(_provider_credentials("gemini").get("api_key") or "")
 
 # OpenAI (native)
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+OPENAI_API_KEY: str = str(_provider_credentials("openai").get("api_key") or "")
 
 # Azure OpenAI
-AZURE_OPENAI_API_KEY: str = os.getenv("AZURE_OPENAI_API_KEY", "")
-AZURE_OPENAI_ENDPOINT: str = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-AZURE_OPENAI_DEPLOYMENT: str = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+_AZURE_CREDS = _provider_credentials("azure")
+AZURE_OPENAI_API_KEY: str = str(_AZURE_CREDS.get("api_key") or "")
+AZURE_OPENAI_ENDPOINT: str = str(_AZURE_CREDS.get("endpoint") or _AZURE_CREDS.get("base_url") or "")
+AZURE_OPENAI_DEPLOYMENT: str = str(
+    _AZURE_CREDS.get("deployment") or _provider_defaults("azure").get("default_model") or "gpt-4o"
+)
 
 # Xiaomi Mimo
-MIMO_API_KEY: str = os.getenv("MIMO_API_KEY", "")
-MIMO_BASE_URL: str = os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1")
+_MIMO_CREDS = _provider_credentials("mimo")
+MIMO_API_KEY: str = str(_MIMO_CREDS.get("api_key") or "")
+MIMO_BASE_URL: str = str(_MIMO_CREDS.get("base_url") or "")
 
 # HuggingFace
 HF_TOKEN: str = os.getenv("HF_TOKEN", "")
@@ -79,55 +153,64 @@ if not SEMANTIC_SCHOLAR_API_KEYS and SEMANTIC_SCHOLAR_API_KEY:
 
 
 # ============================================================================
-# Model Names / IDs
+# Legacy Model Names / IDs
 # ============================================================================
 
-# Gemini evaluator model
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+GEMINI_MODEL: str = str(_provider_defaults("gemini").get("default_model") or "gemini-2.5-flash-lite")
+GPT_MODEL: str = str(_provider_defaults("openai").get("default_model") or "gpt-4o-mini")
+MIMO_MODEL: str = str(_provider_defaults("mimo").get("default_model") or "mimo-v2.5-pro")
 
-# OpenAI GPT evaluator model
-GPT_MODEL: str = os.getenv("GPT_MODEL", "gpt-4o-mini")
+# Generic LLM provider / model (used by novelty verification)
+try:
+    _NOVELTY_CFG = get_aspect_config("novelty")
+except Exception:
+    _NOVELTY_CFG = {}
+LLM_PROVIDER: str = str(_NOVELTY_CFG.get("provider") or os.getenv("LLM_PROVIDER", "openai"))
+LLM_MODEL_NAME: str = str(_NOVELTY_CFG.get("model") or _provider_defaults(LLM_PROVIDER).get("default_model") or "gpt-4o")
+_LLM_CREDS = _provider_credentials(LLM_PROVIDER)
+LLM_API_KEY: str = str(_NOVELTY_CFG.get("api_key") or _LLM_CREDS.get("api_key") or "")
+LLM_API_ENDPOINT: str = str(
+    _NOVELTY_CFG.get("base_url") or _LLM_CREDS.get("base_url") or _LLM_CREDS.get("endpoint") or ""
+)
 
-# Mimo evaluator model
-MIMO_MODEL: str = os.getenv("MIMO_MODEL", "mimo-v2.5-pro")
-
-# Generic LLM provider / model (used by novelty verification and generic clients)
-LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai")
-LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "gpt-4o")
-LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
-LLM_API_ENDPOINT: str = os.getenv("LLM_API_ENDPOINT", "https://api.openai.com/v1")
-
-# Bosch Devmate (Gemini proxy)
-GEMINI_DEVMATE_MODEL: str = os.getenv("GEMINI_DEVMATE_MODEL", os.getenv("DEVMATE_MODEL", "gemini-3-flash-preview"))
-DEVMATE_API_KEY: str = os.getenv("DEVMATE_API_KEY", "")
-DEVMATE_BASE_URL: str = os.getenv("DEVMATE_BASE_URL", "https://devmate.bosch.com/api/v3")
-DEVMATE_PROXY: str = os.getenv("DEVMATE_PROXY", "http://rb-proxy-apac.bosch.com:8080")
-DEVMATE_DISABLE_SSL_VERIFY: bool = os.getenv("DEVMATE_DISABLE_SSL_VERIFY", "true").strip().lower() in {"1", "true", "yes", "on"}
+# Bosch Devmate
+_DEVMATE_CREDS = _provider_credentials("devmate")
+GEMINI_DEVMATE_MODEL: str = str(_provider_defaults("devmate").get("default_model") or "gemini-3-flash-preview")
+DEVMATE_API_KEY: str = str(_DEVMATE_CREDS.get("api_key") or "")
+DEVMATE_BASE_URL: str = str(_DEVMATE_CREDS.get("base_url") or "")
+DEVMATE_PROXY: str = str(_DEVMATE_CREDS.get("proxy") or "")
+DEVMATE_DISABLE_SSL_VERIFY: bool = _as_bool(_DEVMATE_CREDS.get("disable_ssl_verify"), True)
 
 
 # ============================================================================
-# Inference Defaults
+# Legacy Inference Defaults
 # ============================================================================
 
-# Temperatures
-GEMINI_TEMP: float = float(os.getenv("GEMINI_TEMP", "0.0"))
-GPT_TEMP: float = float(os.getenv("GPT_TEMP", "1.0"))
-MIMO_TEMP: float = float(os.getenv("MIMO_TEMP", "0.0"))
+GEMINI_TEMP: float = _as_float(_provider_defaults("gemini").get("default_temperature"), 0.0)
+GPT_TEMP: float = _as_float(_provider_defaults("openai").get("default_temperature"), 1.0)
+MIMO_TEMP: float = _as_float(_provider_defaults("mimo").get("default_temperature"), 0.0)
 
-# Max output tokens
-DEFAULT_MAX_OUTPUT_TOKENS: int = int(os.getenv("DEFAULT_MAX_OUTPUT_TOKENS", "4096"))
-LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "64000"))
+DEFAULT_MAX_OUTPUT_TOKENS: int = _as_int(load_llm_config().get("defaults", {}).get("max_tokens"), 4096)
+LLM_MAX_TOKENS: int = _as_int(_NOVELTY_CFG.get("max_tokens"), DEFAULT_MAX_OUTPUT_TOKENS)
 LLM_PROVIDER_CAP: int = int(os.getenv("LLM_PROVIDER_CAP", "64000"))
 EFFECTIVE_LLM_MAX_TOKENS: int = min(LLM_MAX_TOKENS, LLM_PROVIDER_CAP)
 
-# Prompt size guard
 LLM_MAX_PROMPT_CHARS: int = int(os.getenv("LLM_MAX_PROMPT_CHARS", "250000"))
 MAX_CONTEXT_CHARS: int = int(os.getenv("MAX_CONTEXT_CHARS", "200000"))
 
-# Retry / timeout
-API_TIMEOUT: int = int(os.getenv("API_TIMEOUT", "120"))
-MAX_RETRIES: int = int(os.getenv("MAX_RETRIES", "30"))
-RETRY_DELAY: int = int(os.getenv("RETRY_DELAY", "5"))
+API_TIMEOUT: int = _as_int(
+    _NOVELTY_CFG.get("timeout") or load_llm_config().get("defaults", {}).get("timeout"),
+    120,
+)
+MAX_RETRIES: int = _as_int(
+    _NOVELTY_CFG.get("max_retries") or load_llm_config().get("defaults", {}).get("max_retries"),
+    3,
+)
+RETRY_DELAY: int = _as_int(
+    _NOVELTY_CFG.get("retry_delay") or load_llm_config().get("defaults", {}).get("retry_delay"),
+    1,
+)
+
 SEMANTIC_SCHOLAR_API_BASE: str = os.getenv(
     "SEMANTIC_SCHOLAR_API_BASE", "https://api.semanticscholar.org/graph/v1"
 )
@@ -135,97 +218,101 @@ PHASE2_MAX_QUERY_ATTEMPTS: int = int(os.getenv("PHASE2_MAX_QUERY_ATTEMPTS", "8")
 
 
 # ============================================================================
-# Provider Config Helpers
+# Unified LLM Client Factory
 # ============================================================================
 
+def get_llm_client(
+    name: str,
+    step: Optional[str] = None,
+    **overrides,
+):
+    """Get a PRISMLLMClient configured for an aspect or reviewer.
+
+    Args:
+        name: Aspect name or reviewer name.
+        step: Optional step name for multi-step aspects.
+        **overrides: Override any config field.
+
+    Returns:
+        PRISMLLMClient instance.
+    """
+    aspects = (load_llm_config().get("aspects") or {}).keys()
+    if name in aspects:
+        return PRISMLLMClient.for_aspect(name, step=step, **overrides)
+    else:
+        return PRISMLLMClient.for_reviewer(name, **overrides)
+
+
 def get_provider_config(provider: str = "gemini") -> Dict[str, Any]:
-    """Return a config dict suitable for BaseClient.from_config() or UnifiedChatClient.
+    """Return a config dict for a provider (legacy interface).
 
     Args:
         provider: one of 'gemini', 'openai', 'mimo', 'gemini-devmate',
-                  'azure', 'llm' (generic OpenAI-compatible)
+                  'azure', 'openrouter', 'llm'
 
     Returns:
         dict with keys: api_key, base_url, default_model, default_temperature,
                         default_max_tokens
     """
     provider = provider.lower()
-
-    if provider == "gemini":
-        return {
-            "api_key": GOOGLE_API_KEY,
-            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-            "default_model": GEMINI_MODEL,
-            "default_temperature": GEMINI_TEMP,
-            "default_max_tokens": DEFAULT_MAX_OUTPUT_TOKENS,
-        }
-    elif provider == "openai":
-        return {
-            "api_key": OPENAI_API_KEY,
-            "base_url": None,  # OpenAI default
-            "default_model": GPT_MODEL,
-            "default_temperature": GPT_TEMP,
-            "default_max_tokens": DEFAULT_MAX_OUTPUT_TOKENS,
-        }
-    elif provider == "mimo":
-        return {
-            "api_key": MIMO_API_KEY,
-            "base_url": MIMO_BASE_URL,
-            "default_model": MIMO_MODEL,
-            "default_temperature": MIMO_TEMP,
-            "default_max_tokens": DEFAULT_MAX_OUTPUT_TOKENS,
-        }
-    elif provider == "gemini-devmate":
-        key = DEVMATE_API_KEY or GOOGLE_API_KEY
-        return {
-            "api_key": key,
-            "base_url": DEVMATE_BASE_URL,
-            "default_model": GEMINI_DEVMATE_MODEL,
-            "default_temperature": GEMINI_TEMP,
-            "default_max_tokens": DEFAULT_MAX_OUTPUT_TOKENS,
-        }
-    elif provider == "azure":
-        return {
-            "api_key": AZURE_OPENAI_API_KEY,
-            "base_url": AZURE_OPENAI_ENDPOINT,
-            "default_model": AZURE_OPENAI_DEPLOYMENT,
-            "default_temperature": GPT_TEMP,
-            "default_max_tokens": DEFAULT_MAX_OUTPUT_TOKENS,
-        }
-    elif provider == "llm":
+    if provider == "llm":
         return {
             "api_key": LLM_API_KEY,
             "base_url": LLM_API_ENDPOINT,
             "default_model": LLM_MODEL_NAME,
-            "default_temperature": 0.0,
+            "default_temperature": _as_float(_NOVELTY_CFG.get("temperature"), 0.0),
             "default_max_tokens": EFFECTIVE_LLM_MAX_TOKENS,
         }
-    else:
+
+    normalized = _provider_name(provider)
+    if normalized not in {"gemini", "openai", "mimo", "devmate", "azure", "openrouter"}:
         raise ValueError(
             f"Unknown provider '{provider}'. "
-            f"Supported: gemini, openai, mimo, gemini-devmate, azure, llm"
+            f"Supported: gemini, openai, mimo, gemini-devmate, devmate, azure, openrouter, llm"
         )
+    cfg = _legacy_provider_config(normalized)
+    if provider == "gemini-devmate" and not cfg.get("api_key"):
+        cfg["api_key"] = GOOGLE_API_KEY
+    return cfg
 
 
 def validate_env(
-    require_gemini: bool = True,
-    require_mimo: bool = False,
-    require_openai: bool = False,
-    require_azure: bool = False,
+    require_gemini: Optional[bool] = None,
+    require_mimo: Optional[bool] = None,
+    require_openai: Optional[bool] = None,
+    require_azure: Optional[bool] = None,
+    require_data_root: bool = False,
 ) -> None:
     """Raise EnvironmentError if required API keys are missing."""
+    provider_env_vars = {
+        "gemini": ("GOOGLE_API_KEY", GOOGLE_API_KEY),
+        "openai": ("OPENAI_API_KEY", OPENAI_API_KEY),
+        "azure": ("AZURE_OPENAI_API_KEY", AZURE_OPENAI_API_KEY),
+        "mimo": ("MIMO_API_KEY", MIMO_API_KEY),
+        "devmate": ("DEVMATE_API_KEY", DEVMATE_API_KEY),
+        "openrouter": ("LLM_API_KEY", LLM_API_KEY),
+    }
+
+    required_providers = set(get_referenced_api_providers())
+    if require_gemini:
+        required_providers.add("gemini")
+    if require_mimo:
+        required_providers.add("mimo")
+    if require_openai:
+        required_providers.add("openai")
+    if require_azure:
+        required_providers.add("azure")
+
     errors = []
-    if require_gemini and not GOOGLE_API_KEY:
-        errors.append("GOOGLE_API_KEY is not set")
-    if require_mimo and not MIMO_API_KEY:
-        errors.append("MIMO_API_KEY is not set")
-    if require_openai and not OPENAI_API_KEY:
-        errors.append("OPENAI_API_KEY is not set")
-    if require_azure and not AZURE_OPENAI_API_KEY:
-        errors.append("AZURE_OPENAI_API_KEY is not set")
+    if require_data_root and not DATA_ROOT:
+        errors.append("DATA_ROOT is not set")
+    for provider in sorted(required_providers):
+        env_name, value = provider_env_vars.get(provider, (None, None))
+        if env_name and not value:
+            errors.append(f"{env_name} is not set for provider '{provider}'")
     if errors:
         raise EnvironmentError(
             "Missing required environment variables:\n"
-            + "\n".join(f"  • {e}" for e in errors)
+            + "\n".join(f"  - {e}" for e in errors)
             + "\n\nPlease copy .env.example to .env and fill in the values."
         )

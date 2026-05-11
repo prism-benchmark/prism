@@ -8,8 +8,14 @@ import json
 import logging
 import re
 import time
+import sys
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from utils.text_cleaning import sanitize_unicode
 try:
     import yaml  # type: ignore
 except Exception:
@@ -25,7 +31,11 @@ from config import (
     LLM_API_KEY, LLM_MODEL_NAME, API_TIMEOUT, MAX_RETRIES, LLM_API_ENDPOINT,
     EFFECTIVE_LLM_MAX_TOKENS, RETRY_DELAY, LLM_PROVIDER,
 )
-from utils.text_cleaning import sanitize_unicode
+
+from ai_config import (  # noqa: E402
+    get_aspect_config as get_centralized_aspect_config,
+    get_provider_config as get_centralized_provider_config,
+)
 
 
 class BaseLLMClient:
@@ -789,7 +799,7 @@ class OpenAIClient(BaseLLMClient):
             
             # Handle unexpected response types (some APIs return string directly)
             if isinstance(resp, str):
-                self.logger.warning(f"LLM returned string instead of completion object, using directly")
+                self.logger.warning("LLM returned string instead of completion object, using directly")
                 return resp
             
             if not hasattr(resp, 'choices') or not resp.choices or len(resp.choices) == 0:
@@ -1121,33 +1131,44 @@ def create_llm_client(
     """
     Factory function for OpenAI-compatible or OpenRouter clients.
 
+    Priority: explicit args > centralized YAML config > .env / ai_config defaults.
+
     Args:
-        model_name: Override model name (defaults to config/env).
-        api_endpoint: Override API endpoint (defaults to config/env).
-        api_key: Override API key (defaults to config/env).
-        provider: 'openai' or 'openrouter'. If omitted, falls back to LLM_PROVIDER.
+        model_name: Override model name.
+        api_endpoint: Override API endpoint.
+        api_key: Override API key.
+        provider: 'openai' or 'openrouter'.
 
     Returns:
         A concrete LLM client instance.
     """
     logger = logging.getLogger(__name__)
 
-    # Use provided values or fall back to config
-    key = api_key if api_key is not None else LLM_API_KEY
-    model = model_name if model_name is not None else LLM_MODEL_NAME
-    endpoint = api_endpoint if api_endpoint is not None else LLM_API_ENDPOINT
+    try:
+        cfg = get_centralized_aspect_config("novelty")
+    except Exception:
+        cfg = {}
 
-    # Normalize provider choice
+    normalized_provider = (provider or cfg.get("provider") or LLM_PROVIDER or "openai").lower()
+    if normalized_provider == "gemini-devmate":
+        normalized_provider = "devmate"
+    try:
+        provider_cfg = get_centralized_provider_config(normalized_provider)
+    except Exception:
+        provider_cfg = {}
+
+    key = api_key if api_key is not None else (
+        cfg.get("api_key") or provider_cfg.get("api_key") or LLM_API_KEY
+    )
+    model = model_name if model_name is not None else (
+        cfg.get("model") or provider_cfg.get("default_model") or LLM_MODEL_NAME
+    )
+    endpoint = api_endpoint if api_endpoint is not None else (
+        cfg.get("base_url") or provider_cfg.get("base_url") or LLM_API_ENDPOINT
+    )
     normalized_endpoint = (endpoint or '').lower()
-    normalized_provider = (provider or LLM_PROVIDER or 'openai').lower()
     if 'openrouter.ai' in normalized_endpoint:
         normalized_provider = 'openrouter'
-
-    # Ensure endpoint has proper format with /v1 suffix for OpenAI-compatible APIs
-    if endpoint and not endpoint.endswith(('/v1', '/v1/')):
-        if not endpoint.endswith('/'):
-            endpoint = endpoint + '/'
-        endpoint = endpoint + 'v1'
 
     # Channel 1: OpenRouter
     if normalized_provider == 'openrouter':
@@ -1155,7 +1176,7 @@ def create_llm_client(
         return OpenRouterClient(key, model, endpoint)
 
     # Channel 2: Standard OpenAI or other OpenAI-compatible APIs
-    if normalized_provider in ('openai', 'azure', 'default'):
+    if normalized_provider in ('openai', 'gemini', 'mimo', 'devmate', 'default'):
         # Only strip model prefix for actual OpenAI endpoints, not OpenAI-compatible ones
         if model and '/' in model and 'api.openai.com' in normalized_endpoint:
             try:

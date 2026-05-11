@@ -316,34 +316,62 @@ class ReviewEvaluatorPipeline:
         self.step1_max_output_tokens = int(os.getenv("AZURE_OPENAI_STEP1_MAX_OUTPUT_TOKENS", "35000"))
         self.step2_max_output_tokens = int(os.getenv("AZURE_OPENAI_STEP2_MAX_OUTPUT_TOKENS", "4096"))
         self.step2_max_input_chars   = int(os.getenv("AZURE_OPENAI_STEP2_MAX_INPUT_CHARS", "45000"))
-        provider_name = getattr(client, "provider", None)
-        if provider_name == "gemini-devmate":
-            if "AZURE_OPENAI_STEP1_MAX_OUTPUT_TOKENS" not in os.environ:
-                self.step1_max_output_tokens = max(self.step1_max_output_tokens, 12000)
-            if "AZURE_OPENAI_STEP2_MAX_OUTPUT_TOKENS" not in os.environ:
-                self.step2_max_output_tokens = max(self.step2_max_output_tokens, 8000)
-        if client is not None:
-            self.client = client
-            shared_deployment = getattr(client, "model", None) or getattr(client, "provider", "configured-client")
-            self.step1_deployment = shared_deployment
-            self.step2_deployment = shared_deployment
-        else:
-            preferred_gpt5mini = get_preferred_gpt5mini_deployment()
-            base_deployment = preferred_gpt5mini or get_default_deployment()
-            self.client = AzureChatClient(
-                deployment=base_deployment,
-                api_key=self.api_key,
-                max_output_tokens=max(self.step1_max_output_tokens, self.step2_max_output_tokens),
-            )
-            shared_deployment = base_deployment
-            self.step1_deployment = self._resolve_deployment(
-                "AZURE_OPENAI_STEP1_DEPLOYMENT",
-                shared_deployment,
-            )
-            self.step2_deployment = self._resolve_deployment(
-                "AZURE_OPENAI_STEP2_DEPLOYMENT",
-                shared_deployment,
-            )
+
+        # ── Use centralized config if available ──────────────────────────────
+        _centralized = False
+        if client is None:
+            try:
+                _sys_path_root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+                if _sys_path_root not in sys.path:
+                    sys.path.insert(0, _sys_path_root)
+                from ai_config import get_llm_client
+                self.step1_client = get_llm_client("flaw_identification", step="step1")
+                self.step2_client = get_llm_client("flaw_identification", step="step2")
+                self.client = self.step1_client
+                self.step1_deployment = self.step1_client.model
+                self.step2_deployment = self.step2_client.model
+                _centralized = True
+                print(
+                    "  [INFO] Flaw identification using centralized config "
+                    f"(step1={self.step1_client.provider}/{self.step1_client.model}, "
+                    f"step2={self.step2_client.provider}/{self.step2_client.model})"
+                )
+            except Exception as e:
+                print(f"  [WARNING] Centralized config failed, falling back: {e}")
+
+        if not _centralized:
+            provider_name = getattr(client, "provider", None)
+            if provider_name == "gemini-devmate":
+                if "AZURE_OPENAI_STEP1_MAX_OUTPUT_TOKENS" not in os.environ:
+                    self.step1_max_output_tokens = max(self.step1_max_output_tokens, 12000)
+                if "AZURE_OPENAI_STEP2_MAX_OUTPUT_TOKENS" not in os.environ:
+                    self.step2_max_output_tokens = max(self.step2_max_output_tokens, 8000)
+            if client is not None:
+                self.client = client
+                self.step1_client = client
+                self.step2_client = client
+                shared_deployment = getattr(client, "model", None) or getattr(client, "provider", "configured-client")
+                self.step1_deployment = shared_deployment
+                self.step2_deployment = shared_deployment
+            else:
+                preferred_gpt5mini = get_preferred_gpt5mini_deployment()
+                base_deployment = preferred_gpt5mini or get_default_deployment()
+                self.client = AzureChatClient(
+                    deployment=base_deployment,
+                    api_key=self.api_key,
+                    max_output_tokens=max(self.step1_max_output_tokens, self.step2_max_output_tokens),
+                )
+                self.step1_client = self.client
+                self.step2_client = self.client
+                shared_deployment = base_deployment
+                self.step1_deployment = self._resolve_deployment(
+                    "AZURE_OPENAI_STEP1_DEPLOYMENT",
+                    shared_deployment,
+                )
+                self.step2_deployment = self._resolve_deployment(
+                    "AZURE_OPENAI_STEP2_DEPLOYMENT",
+                    shared_deployment,
+                )
         
         # Store prompts
         self.prompt_step1 = """
@@ -542,6 +570,7 @@ OUTPUT FORMAT (Strict JSON):
         invalid_response: str,
         max_output_tokens: int,
         deployment: str | None,
+        client: Any | None = None,
     ) -> dict[str, Any]:
         repair_system_prompt = (
             "You are a strict JSON repair assistant. "
@@ -558,7 +587,8 @@ OUTPUT FORMAT (Strict JSON):
             f"{invalid_response}\n\n"
             "Rewrite the answer as exactly one valid JSON object that follows the original task and schema."
         )
-        repaired_text = self.client.generate_text(
+        llm_client = client or self.client
+        repaired_text = llm_client.generate_text(
             repair_system_prompt,
             repair_user_prompt,
             response_format={"type": "json_object"},
@@ -577,8 +607,10 @@ OUTPUT FORMAT (Strict JSON):
         temperature: float,
         max_output_tokens: int,
         deployment: str | None,
+        client: Any | None = None,
     ) -> dict[str, Any]:
-        response_text = self.client.generate_text(
+        llm_client = client or self.client
+        response_text = llm_client.generate_text(
             system_prompt,
             user_prompt,
             response_format={"type": "json_object"},
@@ -597,6 +629,7 @@ OUTPUT FORMAT (Strict JSON):
                 invalid_response=response_text,
                 max_output_tokens=max_output_tokens,
                 deployment=deployment,
+                client=llm_client,
             )
     
     def step1_atomize_and_group(self, human_reviews: Dict[str, str], llm_review: str) -> dict:
@@ -634,6 +667,7 @@ OUTPUT FORMAT (Strict JSON):
             temperature=0.1,
             max_output_tokens=adaptive_tokens,
             deployment=self.step1_deployment,
+            client=self.step1_client,
         )
 
     def step2_judge_flaws(self, paper_text: str, micro_flaws_json: dict) -> dict:
@@ -654,6 +688,7 @@ OUTPUT FORMAT (Strict JSON):
             temperature=0.0,
             max_output_tokens=self.step2_max_output_tokens,
             deployment=self.step2_deployment,
+            client=self.step2_client,
         )
 
 class MetricsCalculator:

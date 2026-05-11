@@ -4,30 +4,35 @@ from pathlib import Path as _Path
 
 # ── Import centralized AI config ─────────────────────────────────────────
 sys.path.insert(0, str(_Path(__file__).parent.parent.parent.parent))
-from ai_config import HF_TOKEN, DATA_ROOT as _AI_DATA_ROOT  # noqa: E402
+from ai_config import HF_TOKEN, DATA_ROOT as _AI_DATA_ROOT, get_reviewer_config as _get_reviewer_cfg  # noqa: E402
+
+# ── Load per-reviewer config from llm_config.yaml ────────────────────────
+_deepreview_cfg = {}
+try:
+    _deepreview_cfg = _get_reviewer_cfg("deepreview")
+except Exception:
+    pass
 
 # ============================================================
 # DeepReviewer Pipeline Configuration
-# Edit ONLY this file to change settings
+# Per-reviewer overrides can be set in llm_config.yaml under `reviewers.deepreview`.
 # ============================================================
 
 # --- HuggingFace ---
 HF_TOKEN = HF_TOKEN or os.getenv("HF_TOKEN", "YOUR_HF_TOKEN")
 
 # --- Semantic Scholar ---
-# Semantic Scholar API enabled for enhanced paper search and retrieval
 S2_API_KEY = os.getenv("S2_API_KEY", "YOUR_S2_API_KEY")
 
 # --- GPU Assignment ---
-# Use "auto" to pick the GPUs with the most free VRAM at runtime.
 DEEPREVIEWER_GPU      = "auto"
 
 # --- Models ---
-DEEPREVIEWER_SIZE      = "14B"
-TENSOR_PARALLEL_SIZE   = 2      # must match number of GPUs in DEEPREVIEWER_GPU
-GPU_MEMORY_UTILIZATION = 0.75
-REVIEW_MODE            = "Standard Mode"  # "Fast Mode", "Standard Mode", "Best Mode"
-REVIEWER_NUM           = 1          # 3 reviewers + 1 meta review (auto)
+DEEPREVIEWER_SIZE      = _deepreview_cfg.get("model_size", "14B")
+TENSOR_PARALLEL_SIZE   = int(os.getenv("DEEPREVIEWER_TENSOR_PARALLEL_SIZE", str(_deepreview_cfg.get("tensor_parallel_size", 2))))
+GPU_MEMORY_UTILIZATION = float(os.getenv("DEEPREVIEWER_GPU_MEMORY_UTILIZATION", str(_deepreview_cfg.get("gpu_memory_utilization", 0.75))))
+REVIEW_MODE            = _deepreview_cfg.get("review_mode", "Standard Mode")
+REVIEWER_NUM           = int(os.getenv("DEEPREVIEWER_REVIEWER_NUM", str(_deepreview_cfg.get("reviewer_num", 1))))
 
 # --- Dataset Folders ---
 DATA_ROOT = os.getenv("DATA_ROOT", _AI_DATA_ROOT or "/path/to/data")
@@ -35,7 +40,6 @@ PAPERS_FOLDER  = os.getenv("DEEPREVIEWER_PAPERS_FOLDER", os.path.join(DATA_ROOT,
 JSON_FOLDER = os.getenv("DEEPREVIEWER_JSON_FOLDER", os.path.join(DATA_ROOT, "ICLR2026", "json"))
 
 # --- Paper Selection ---
-# Set to None to process all papers, or provide path to text file with paper IDs (one per line)
 PAPER_IDS_FILE = os.getenv("DEEPREVIEWER_PAPER_IDS_FILE", os.path.join(DATA_ROOT, "ICLR2026", "data_subset", "paper_ids_200.txt"))
 
 # --- Output ---
@@ -43,8 +47,7 @@ OUTPUT_FOLDER = os.getenv("DEEPREVIEWER_OUTPUT_FOLDER", "outputs/deepreview_iclr
 SUMMARY_FILE  = os.getenv("DEEPREVIEWER_SUMMARY_FILE", "outputs/summary_deepreview_iclr2026.json")
 
 # --- Resuming ---
-# If True, skip papers that already have a result file in OUTPUT_FOLDER
 SKIP_COMPLETED = True
 
 # --- Batch size ---
-BATCH_SIZE = 8  # Xử lý 4 papers cùng lúc (có thể tăng lên 8-16 nếu GPU đủ)
+BATCH_SIZE = int(os.getenv("DEEPREVIEWER_BATCH_SIZE", str(_deepreview_cfg.get("batch_size", 8))))

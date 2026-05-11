@@ -1,0 +1,254 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PRISM — Unified LLM Configuration (Single Source of Truth)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Everything lives here: providers, defaults, aspects, reviewers, run profiles.
+#
+# USAGE:
+#   # Run everything enabled:
+#   python run.py
+#
+#   # Run only specific aspects:
+#   python run.py --only constructiveness,novelty
+#
+#   # Run only specific reviewers:
+#   python run.py --only treereview,sea
+#
+#   # Skip specific items:
+#   python run.py --skip flaw_identification,deepreview
+#
+#   # Use a run profile:
+#   python run.py --profile quick
+#
+#   # List what's available:
+#   python run.py --list
+#
+# To disable any component, set  enabled: false  on it.
+# To use env vars for sensitive values, use ${ENV_VAR_NAME} or ${VAR:default}.
+#
+# Provider names: openai, gemini, azure, mimo, openrouter, devmate
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── Run Profiles ─────────────────────────────────────────────────────────
+# Pre-defined subsets for quick experimentation. Use --profile <name>.
+#
+# Each profile lists which aspects/reviewers to INCLUDE. Omitted items are
+# still toggled by their own `enabled` flag — profiles only FILTER, they
+# don't force-enable disabled items.
+
+run_profiles:
+  # Everything enabled (default — no filter applied)
+  all: null
+
+  # Benchmarking aspects only (no LLM reviewers)
+  aspects:
+    - constructiveness
+    - depth_of_analysis
+    - flaw_identification
+    - novelty
+
+  # LLM reviewers only (no benchmarking aspects)
+  reviewers:
+    - sea
+    - reviewer2
+    - treereview
+    - deepreview
+    - cyclereview
+
+  # Quick smoke test — fast models, single aspect + single reviewer
+  quick:
+    - constructiveness
+    - treereview
+
+  # Heavy evaluation — all aspects with the best models
+  heavy:
+    - constructiveness
+    - depth_of_analysis
+    - flaw_identification
+    - novelty
+    - treereview
+    - deepreview
+
+# ── Provider Credentials & Endpoints ──────────────────────────────────────
+providers:
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    base_url: https://api.openai.com/v1
+
+  gemini:
+    api_key: ${GOOGLE_API_KEY}
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+
+  azure:
+    api_key: ${AZURE_OPENAI_API_KEY}
+    endpoint: ${AZURE_OPENAI_ENDPOINT}
+    api_version: "2024-10-21"
+    deployment: ${AZURE_OPENAI_DEPLOYMENT:gpt-4o}
+
+  mimo:
+    api_key: ${MIMO_API_KEY}
+    base_url: ${MIMO_BASE_URL:https://api.xiaomimimo.com/v1}
+
+  devmate:
+    api_key: ${DEVMATE_API_KEY}
+    base_url: ${DEVMATE_BASE_URL:https://devmate.bosch.com/api/v3}
+    proxy: ${DEVMATE_PROXY:}
+    disable_ssl_verify: ${DEVMATE_DISABLE_SSL_VERIFY:true}
+
+  openrouter:
+    api_key: ${LLM_API_KEY}
+    base_url: https://openrouter.ai/api/v1
+
+# ── Global Defaults ──────────────────────────────────────────────────────
+# Used when an aspect or reviewer does not specify its own override.
+defaults:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+  max_tokens: 4096
+  max_retries: ${MAX_RETRIES:3}
+  retry_delay: ${RETRY_DELAY:1}
+  timeout: ${API_TIMEOUT:120}
+
+# ── Provider-Level Defaults ──────────────────────────────────────────────
+# Fallback model/params when only a provider name is given (no explicit model).
+# Used by get_provider_config() and legacy adapters.
+provider_defaults:
+  gemini:
+    default_model: gemini-2.5-flash-lite
+    default_temperature: 0.0
+    default_max_tokens: 4096
+
+  openai:
+    default_model: gpt-4o-mini
+    default_temperature: 1.0
+    default_max_tokens: 4096
+
+  azure:
+    default_model: gpt-4o
+    default_temperature: 1.0
+    default_max_tokens: 4096
+
+  mimo:
+    default_model: mimo-v2.5-pro
+    default_temperature: 0.0
+    default_max_tokens: 4096
+
+  devmate:
+    default_model: gemini-3-flash-preview
+    default_temperature: 0.0
+    default_max_tokens: 4096
+
+  openrouter:
+    default_model: gpt-4o
+    default_temperature: 0.0
+    default_max_tokens: 64000
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Benchmarking Aspects (Aspects_benchmarking evaluators)
+# ═══════════════════════════════════════════════════════════════════════════
+# Set `enabled: false` to skip.  Multi-step aspects nest step1/step2/etc.
+# Unspecified fields fall back to `defaults`.
+
+aspects:
+  # ── Constructiveness evaluation (ARC scoring) ─────────────────────────
+  constructiveness:
+    enabled: true
+    provider: mimo
+    model: openai/gpt-oss-20b
+    temperature: 0.0
+    max_tokens: 4000
+
+  # ── Depth of Analysis (argument segmentation, grounding) ──────────────
+  depth_of_analysis:
+    enabled: true
+    provider: mimo
+    model: openai/gpt-oss-20b
+    temperature: 0.0
+    max_tokens: 4000
+
+  # ── Flaw Identification ──────────────────────────────────────────────
+  flaw_identification:
+    enabled: true
+    # Step 1: Atomize & Group — output can be very large
+    step1:
+      provider: mimo
+      model: openai/gpt-oss-20b
+      temperature: 0.1
+      max_tokens: 4000
+    # Step 2: Judge Flaws — compact output
+    step2:
+      provider: mimo
+      model: openai/gpt-oss-20b
+      temperature: 0.0
+      max_tokens: 4000
+
+  # ── Novelty Verification ─────────────────────────────────────────────
+  novelty:
+    enabled: true
+    provider: mimo
+    model: openai/gpt-oss-20b
+    temperature: 0.0
+    max_tokens: 4000
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LLM Reviewers (LLM_reviewer subsystem)
+# ═══════════════════════════════════════════════════════════════════════════
+# `type: local` → vLLM/transformers runner (not an API client).
+# `type: api`   → API-based, can be used via PRISMLLMClient.for_reviewer().
+# Set `enabled: false` to skip.
+
+reviewers:
+  # ── SEA reviewer (local vLLM) ────────────────────────────────────────
+  sea:
+    enabled: true
+    type: local
+    model_path: Qwen/Qwen2-7B-Instruct
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.95
+    batch_size: 8
+    max_model_len: 32000
+    tensor_parallel_size: 1
+    gpu_memory_utilization: 0.76
+
+  # ── Reviewer2 (local vLLM / Transformers) ────────────────────────────
+  reviewer2:
+    enabled: true
+    type: local
+    model_path: /datastore/npl/luannt/.cache/huggingface/Qwen3-14B
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.7
+    top_k: 50
+    batch_size: 1
+    seq_len: 40960
+    gpu_memory_utilization: 0.90
+
+  # ── TreeReview (API-based, uses LangChain) ───────────────────────────
+  treereview:
+    enabled: true
+    type: api
+    provider: gemini
+    model: gemini-2.0-flash
+    temperature: 0.0
+    max_tokens: 32768
+
+  # ── DeepReviewer (local vLLM) ────────────────────────────────────────
+  deepreview:
+    enabled: true
+    type: local
+    model_size: "14B"
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.75
+    batch_size: 8
+    review_mode: "Standard Mode"
+    reviewer_num: 1
+
+  # ── CycleReviewer (local vLLM) ───────────────────────────────────────
+  cyclereview:
+    enabled: true
+    type: local
+    model_size: "8B"
+    gpu_memory_utilization: 0.90
+    max_model_len: 24000
