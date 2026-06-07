@@ -164,60 +164,50 @@ Final_LLM_Reviewer_Data/
 
 ---
 
-## Setup
+## Quick Start (unified runner)
 
-### 1. Clone the repository and install dependencies
+The simplest way to run experiments is from the **repo root** using `run.py`:
 
 ```bash
-cd Aspects_benchmarking
+cd ..
+python run.py --setup-data          # download dataset (~4 GB)
+python run.py --only constructiveness --limit 10  # quick test
+python run.py                       # full paper experiment
+```
+
+See `../README.md` for the complete workflow.
+
+---
+
+## Setup (per-pipeline)
+
+### 1. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Download the dataset
-
-Download **Final\_LLM\_Reviewer\_Data** and place it anywhere on your machine (see [Dataset section](#dataset-final_llm_reviewer_data) for the required layout).
-
-### 3. Configure environment variables
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and fill in your values:
+Edit `.env` with your `DATA_ROOT` and API keys.
 
-```dotenv
-# Absolute path to the downloaded dataset root
-DATA_ROOT=/absolute/path/to/Final_LLM_Reviewer_Data
-
-# Gemini evaluator backend
-GOOGLE_API_KEY=
-
-# Optional OpenAI-compatible evaluator backend for robustness checks
-MIMO_API_KEY=
-MIMO_BASE_URL=
-
-# Optional backends
-# OPENAI_API_KEY=
-# AZURE_OPENAI_API_KEY=...
-# AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-```
-
-> **All aspect pipelines** load this single `.env` file automatically via `env_loader.py`. No secrets or machine-specific paths should be committed.
-
-### 4. Verify
+### 3. Verify
 
 ```bash
 python -c "
-from env_loader import DATA_ROOT, GOOGLE_API_KEY, MIMO_API_KEY
+from env_loader import DATA_ROOT, GOOGLE_API_KEY
 print('DATA_ROOT     :', DATA_ROOT)
 print('Gemini key set:', bool(GOOGLE_API_KEY))
-print('Mimo key set  :', bool(MIMO_API_KEY))
 "
 ```
 
 ---
 
-## Running the Pipeline
+## Running the Pipeline (manual)
 
 ### Depth of Analysis
 

@@ -310,16 +310,58 @@ DEVMATE_API_KEY=...
 LLM_API_KEY=...           # used by openrouter
 ```
 
-### Supported providers
+### Built-in providers
 
-| Provider    | SDK           | Notes                               |
-|-------------|---------------|-------------------------------------|
-| `openai`    | openai        | Native OpenAI API                   |
-| `gemini`    | google-genai  | Native Gemini SDK                   |
-| `azure`     | openai        | Azure OpenAI (needs deployment)     |
-| `mimo`      | openai        | Xiaomi Mimo (OpenAI-compatible)     |
-| `devmate`   | openai        | Bosch Devmate (with proxy/SSL)      |
-| `openrouter`| openai        | OpenRouter (OpenAI-compatible)      |
+| Provider      | SDK           | Notes                               |
+|---------------|---------------|-------------------------------------|
+| `openai`      | openai        | Native OpenAI API                   |
+| `gemini`      | google-genai  | Native Gemini SDK                   |
+| `azure`       | openai        | Azure OpenAI (needs deployment)     |
+| `mimo`        | openai        | Xiaomi Mimo (OpenAI-compatible)     |
+| `devmate`     | openai        | Bosch Devmate (with proxy/SSL)      |
+| `openrouter`  | openai        | OpenRouter (OpenAI-compatible)      |
+
+### Adding any OpenAI-compatible provider
+
+No code changes needed. Add a new entry under `providers` and reference it:
+
+```yaml
+# llm_config.yaml
+providers:
+  together:
+    api_key: ${TOGETHER_API_KEY}
+    base_url: https://api.together.xyz/v1
+
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}
+    base_url: https://api.anthropic.com/v1
+
+aspects:
+  constructiveness:
+    provider: together
+    model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+    temperature: 0.0
+```
+
+```bash
+# .env
+TOGETHER_API_KEY=tsk_...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+The system automatically resolves `{PROVIDER}_API_KEY` and `{PROVIDER}_BASE_URL` from `.env`. Unknown providers are treated as OpenAI-compatible.
+
+---
+
+## Data Setup
+
+```bash
+# Download and prepare the full benchmark dataset:
+python run.py --setup-data
+
+# Or manually:
+python Data/setup_aspect_benchmark.py --write-env
+```
 
 ---
 
@@ -364,6 +406,18 @@ When multiple filters are active, they combine like this:
 
 ## Common Recipes
 
+### Full paper experiment (all 4 aspects, all conferences, all reviewers)
+
+```bash
+python run.py
+```
+
+### Dry-run to preview what would execute
+
+```bash
+python run.py --dry-run
+```
+
 ### Run only benchmarking aspects (no LLM reviewers)
 
 ```bash
@@ -394,6 +448,30 @@ Or in Python:
 
 ```python
 client = PRISMLLMClient.for_aspect("constructiveness", model="gpt-4o")
+```
+
+### Run on specific conferences
+
+```bash
+python run.py --conference iclr2024,neurips2025
+```
+
+### Process a subset of papers (for quick iteration)
+
+```bash
+python run.py --only constructiveness --limit 10
+```
+
+### Forward extra arguments to underlying pipeline
+
+```bash
+python run.py --only constructiveness -- --workers 4 --with-paper
+```
+
+### Setup / download the benchmark dataset
+
+```bash
+python run.py --setup-data
 ```
 
 ### Disable slow reviewers temporarily
@@ -465,6 +543,7 @@ validate_env()  # raises EnvironmentError if API keys missing
 
 ```
 PRISM/
+├── run.py                                       ← Unified experiment orchestrator
 ├── llm_config.yaml                              ← SINGLE SOURCE OF TRUTH
 ├── llm_client.py                                ← Config loader + PRISMLLMClient
 ├── ai_config.py                                 ← Thin facade (legacy re-exports)

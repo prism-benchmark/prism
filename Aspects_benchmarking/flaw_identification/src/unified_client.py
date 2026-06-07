@@ -101,7 +101,9 @@ def _extract_openai_response_text(response: Any) -> str:
             if isinstance(content, str):
                 return content.strip()
             if isinstance(content, list):
-                combined = "".join(_stringify_content_part(part) for part in content).strip()
+                combined = "".join(
+                    _stringify_content_part(part) for part in content
+                ).strip()
                 if combined:
                     return combined
 
@@ -123,7 +125,9 @@ def _extract_openai_response_text(response: Any) -> str:
                 if isinstance(content, str):
                     chunks.append(content)
                 elif isinstance(content, list):
-                    chunks.append("".join(_stringify_content_part(part) for part in content))
+                    chunks.append(
+                        "".join(_stringify_content_part(part) for part in content)
+                    )
             combined = "".join(chunks).strip()
             if combined:
                 return combined
@@ -168,8 +172,6 @@ class UnifiedChatClient:
     set once at construction time.
     """
 
-    SUPPORTED_PROVIDERS = {"openai", "gemini", "gemini-devmate", "mimo"}
-
     def __init__(
         self,
         provider: str,
@@ -179,8 +181,6 @@ class UnifiedChatClient:
         max_output_tokens: int = 4096,
     ):
         self.provider = provider.lower()
-        if self.provider not in self.SUPPORTED_PROVIDERS:
-            raise ValueError(f"provider must be one of {self.SUPPORTED_PROVIDERS}, got '{provider}'")
 
         self.temperature = temperature
         self.max_output_tokens = max_output_tokens
@@ -189,26 +189,51 @@ class UnifiedChatClient:
             self.model = model or _get_env_value("OPENAI_MODEL") or GPT_MODEL
             self._init_openai(api_key)
         elif self.provider == "gemini":
-            self.model = model or _get_env_value("GEMINI_MODEL") or f"models/{GEMINI_MODEL}"
+            self.model = (
+                model or _get_env_value("GEMINI_MODEL") or f"models/{GEMINI_MODEL}"
+            )
             self._init_gemini(api_key)
         elif self.provider == "gemini-devmate":
-            self.model = model or _get_env_value("GEMINI_DEVMATE_MODEL", "DEVMATE_MODEL") or GEMINI_DEVMATE_MODEL
+            self.model = (
+                model
+                or _get_env_value("GEMINI_DEVMATE_MODEL", "DEVMATE_MODEL")
+                or GEMINI_DEVMATE_MODEL
+            )
             self._init_gemini_devmate(api_key)
         elif self.provider == "mimo":
             self.model = model or _get_env_value("MIMO_MODEL") or MIMO_MODEL
             self._init_mimo(api_key)
+        else:
+            # Unknown provider — treat as OpenAI-compatible with custom config
+            self.model = model or _get_env_value(f"{self.provider.upper()}_MODEL") or ""
+            self._init_openai(api_key, provider_prefix=self.provider)
 
     # ------------------------------------------------------------------
     # Provider setup
     # ------------------------------------------------------------------
 
-    def _init_openai(self, api_key: Optional[str]) -> None:
+    def _init_openai(
+        self, api_key: Optional[str] = None, provider_prefix: str = "openai"
+    ) -> None:
         try:
             from openai import OpenAI
-            key = api_key or _get_env_value("OPENAI_API_KEY") or OPENAI_API_KEY
-            base_url = _get_env_value("OPENAI_BASE_URL")
+
+            prefix = provider_prefix.upper()
+            key = (
+                api_key
+                or _get_env_value(f"{prefix}_API_KEY")
+                or _get_env_value("OPENAI_API_KEY")
+                or OPENAI_API_KEY
+            )
+            base_url = _get_env_value(f"{prefix}_BASE_URL") or _get_env_value(
+                "OPENAI_BASE_URL"
+            )
             self._openai_client = OpenAI(api_key=key, base_url=base_url)
-            print(f"[INFO] UnifiedChatClient: OpenAI ready (model={self.model})", file=sys.stderr)
+            print(
+                f"[INFO] UnifiedChatClient: OpenAI-compatible ({provider_prefix}) ready "
+                f"(model={self.model})",
+                file=sys.stderr,
+            )
         except Exception as exc:
             raise RuntimeError(f"Failed to initialise OpenAI client: {exc}") from exc
 
@@ -229,13 +254,18 @@ class UnifiedChatClient:
                 http_client=http_client,
             )
         except Exception as exc:
-            raise RuntimeError(f"Failed to initialise Devmate OpenAI-compatible client: {exc}") from exc
+            raise RuntimeError(
+                f"Failed to initialise Devmate OpenAI-compatible client: {exc}"
+            ) from exc
 
     def _init_gemini_devmate(self, api_key: Optional[str]) -> None:
         self._devmate_api_key = (
             api_key
-            or _get_env_value("GEMINI_DEVMATE_API_KEY", "DEVMATE_API_KEY", "GEMINI_API_KEY")
-            or DEVMATE_API_KEY or GOOGLE_API_KEY
+            or _get_env_value(
+                "GEMINI_DEVMATE_API_KEY", "DEVMATE_API_KEY", "GEMINI_API_KEY"
+            )
+            or DEVMATE_API_KEY
+            or GOOGLE_API_KEY
         )
         if not self._devmate_api_key:
             raise RuntimeError(
@@ -243,11 +273,10 @@ class UnifiedChatClient:
             )
 
         self._devmate_base_url = _get_env_value("DEVMATE_BASE_URL") or DEVMATE_BASE_URL
-        self._devmate_proxy = (
-            _get_env_value("DEVMATE_PROXY")
-            or DEVMATE_PROXY
+        self._devmate_proxy = _get_env_value("DEVMATE_PROXY") or DEVMATE_PROXY
+        self._devmate_ssl_verify = not (
+            _env_flag("DEVMATE_DISABLE_SSL_VERIFY") or DEVMATE_DISABLE_SSL_VERIFY
         )
-        self._devmate_ssl_verify = not (_env_flag("DEVMATE_DISABLE_SSL_VERIFY") or DEVMATE_DISABLE_SSL_VERIFY)
         self._devmate_proxy_fallback_used = False
         self._openai_client = self._build_devmate_client(self._devmate_proxy)
         print(
@@ -258,23 +287,37 @@ class UnifiedChatClient:
     def _init_mimo(self, api_key: Optional[str]) -> None:
         try:
             from openai import OpenAI
+
             key = api_key or _get_env_value("MIMO_API_KEY") or MIMO_API_KEY
             if not key:
                 raise RuntimeError("MIMO_API_KEY environment variable not set")
             base_url = _get_env_value("MIMO_BASE_URL") or MIMO_BASE_URL
             self._openai_client = OpenAI(api_key=key, base_url=base_url)
-            print(f"[INFO] UnifiedChatClient: Mimo ready (model={self.model}, base_url={base_url})", file=sys.stderr)
+            print(
+                f"[INFO] UnifiedChatClient: Mimo ready (model={self.model}, base_url={base_url})",
+                file=sys.stderr,
+            )
         except Exception as exc:
             raise RuntimeError(f"Failed to initialise Mimo client: {exc}") from exc
 
     def _init_gemini(self, api_key: Optional[str]) -> None:
         try:
             from google import genai
-            key = api_key or _get_env_value("GEMINI_API_KEY", "GOOGLE_API_KEY") or GOOGLE_API_KEY
+
+            key = (
+                api_key
+                or _get_env_value("GEMINI_API_KEY", "GOOGLE_API_KEY")
+                or GOOGLE_API_KEY
+            )
             if not key:
-                raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable not set")
+                raise RuntimeError(
+                    "GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable not set"
+                )
             self._gemini_client = genai.Client(api_key=key)
-            print(f"[INFO] UnifiedChatClient: Gemini ready (model={self.model})", file=sys.stderr)
+            print(
+                f"[INFO] UnifiedChatClient: Gemini ready (model={self.model})",
+                file=sys.stderr,
+            )
         except Exception as exc:
             raise RuntimeError(f"Failed to initialise Gemini client: {exc}") from exc
 
@@ -296,17 +339,39 @@ class UnifiedChatClient:
         Generate text and return raw string (matches AzureChatClient.generate_text).
         """
         temp = self.temperature if temperature is None else temperature
-        tokens = self.max_output_tokens if max_output_tokens is None else max_output_tokens
-        json_mode = response_format is not None and response_format.get("type") == "json_object"
+        tokens = (
+            self.max_output_tokens if max_output_tokens is None else max_output_tokens
+        )
+        json_mode = (
+            response_format is not None and response_format.get("type") == "json_object"
+        )
 
         if self.provider == "openai":
-            return self._call_openai(system_prompt, user_prompt, temp, tokens, json_mode)
+            return self._call_openai(
+                system_prompt, user_prompt, temp, tokens, json_mode
+            )
         elif self.provider == "gemini":
-            return self._call_gemini(system_prompt, user_prompt, temp, tokens, json_mode)
+            return self._call_gemini(
+                system_prompt, user_prompt, temp, tokens, json_mode
+            )
         elif self.provider == "gemini-devmate":
-            return self._call_openai(system_prompt, user_prompt, temp, tokens, json_mode, provider_label="Devmate")
+            return self._call_openai(
+                system_prompt,
+                user_prompt,
+                temp,
+                tokens,
+                json_mode,
+                provider_label="Devmate",
+            )
         elif self.provider == "mimo":
-            return self._call_openai(system_prompt, user_prompt, temp, tokens, json_mode, provider_label="Mimo")
+            return self._call_openai(
+                system_prompt,
+                user_prompt,
+                temp,
+                tokens,
+                json_mode,
+                provider_label="Mimo",
+            )
 
     # ------------------------------------------------------------------
     # OpenAI backend
@@ -353,7 +418,7 @@ class UnifiedChatClient:
         for attempt in range(max_retries):
             try:
                 print(
-                    f"  [DEBUG] {provider_label} call attempt {attempt+1}/{max_retries}: model={self.model}",
+                    f"  [DEBUG] {provider_label} call attempt {attempt + 1}/{max_retries}: model={self.model}",
                     file=sys.stderr,
                 )
                 resp = self._openai_client.chat.completions.create(**request_kwargs)
@@ -383,7 +448,10 @@ class UnifiedChatClient:
                     request_kwargs["max_completion_tokens"] = max_tokens
                     request_kwargs.pop("temperature", None)  # also drop temperature
                     continue  # retry immediately, don't count as real attempt
-                if request_kwargs.get("response_format") and "response_format" in err.lower():
+                if (
+                    request_kwargs.get("response_format")
+                    and "response_format" in err.lower()
+                ):
                     print(
                         f"  [INFO] Retrying {provider_label} call without response_format enforcement",
                         file=sys.stderr,
@@ -396,10 +464,18 @@ class UnifiedChatClient:
                     and self._devmate_proxy
                     and any(
                         token in err.lower()
-                        for token in ("proxy", "407", "tunnel", "connection refused", "getaddrinfo failed")
+                        for token in (
+                            "proxy",
+                            "407",
+                            "tunnel",
+                            "connection refused",
+                            "getaddrinfo failed",
+                        )
                     )
                 ):
-                    print("  [INFO] Retrying Devmate call without proxy", file=sys.stderr)
+                    print(
+                        "  [INFO] Retrying Devmate call without proxy", file=sys.stderr
+                    )
                     self._openai_client = self._build_devmate_client(None)
                     self._devmate_proxy_fallback_used = True
                     continue
@@ -412,14 +488,20 @@ class UnifiedChatClient:
                         for token in ("connection timed out", "502", "timed out")
                     )
                 ):
-                    print("  [INFO] Devmate proxy timed out; retrying without proxy", file=sys.stderr)
+                    print(
+                        "  [INFO] Devmate proxy timed out; retrying without proxy",
+                        file=sys.stderr,
+                    )
                     self._openai_client = self._build_devmate_client(None)
                     self._devmate_proxy_fallback_used = True
                     continue
-                print(f"  [WARNING] {provider_label} call failed (attempt {attempt+1}): {exc}", file=sys.stderr)
+                print(
+                    f"  [WARNING] {provider_label} call failed (attempt {attempt + 1}): {exc}",
+                    file=sys.stderr,
+                )
                 if attempt == max_retries - 1:
                     raise
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         return ""  # unreachable
 
     def _repair_json_response(
@@ -463,7 +545,9 @@ class UnifiedChatClient:
             repair_request_kwargs["temperature"] = 0.0
             repair_request_kwargs["max_tokens"] = max_tokens
 
-        repair_response = self._openai_client.chat.completions.create(**repair_request_kwargs)
+        repair_response = self._openai_client.chat.completions.create(
+            **repair_request_kwargs
+        )
         repaired_text = _extract_openai_response_text(repair_response)
         return _extract_first_json_object(repaired_text)
 
@@ -485,7 +569,7 @@ class UnifiedChatClient:
         for attempt in range(max_retries):
             try:
                 print(
-                    f"  [DEBUG] Gemini call attempt {attempt+1}/{max_retries}: model={self.model}",
+                    f"  [DEBUG] Gemini call attempt {attempt + 1}/{max_retries}: model={self.model}",
                     file=sys.stderr,
                 )
                 config_kwargs: dict[str, Any] = {
@@ -507,7 +591,10 @@ class UnifiedChatClient:
                 try:
                     finish_reason = resp.candidates[0].finish_reason
                     finish_name = getattr(finish_reason, "name", str(finish_reason))
-                    if "MAX_TOKENS" in finish_name.upper() or str(finish_reason) in ("2", "FinishReason.MAX_TOKENS"):
+                    if "MAX_TOKENS" in finish_name.upper() or str(finish_reason) in (
+                        "2",
+                        "FinishReason.MAX_TOKENS",
+                    ):
                         print(
                             f"  [WARNING] Gemini response TRUNCATED (finish_reason={finish_name})."
                             f" Response length={len(text)} chars, max_output_tokens={max_tokens}."
@@ -520,10 +607,11 @@ class UnifiedChatClient:
                 return text
             except Exception as exc:
                 exc_name = type(exc).__name__
-                print(f"  [WARNING] Gemini call failed (attempt {attempt+1}): {exc_name}: {exc}", file=sys.stderr)
+                print(
+                    f"  [WARNING] Gemini call failed (attempt {attempt + 1}): {exc_name}: {exc}",
+                    file=sys.stderr,
+                )
                 if attempt == max_retries - 1:
                     raise
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         return ""  # unreachable
-
-

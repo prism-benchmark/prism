@@ -113,6 +113,7 @@ def load_llm_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
 # ── Type coercion helpers ─────────────────────────────────────────────────
 
+
 def _is_missing(value: Any) -> bool:
     return value is None or value == ""
 
@@ -153,7 +154,13 @@ def _coerce_float(value: Any, default: float = 0.0) -> float:
 
 def _coerce_numeric_fields(cfg: Dict[str, Any]) -> Dict[str, Any]:
     coerced = dict(cfg)
-    for key in ("temperature", "top_p", "gpu_memory_utilization", "retry_delay", "timeout"):
+    for key in (
+        "temperature",
+        "top_p",
+        "gpu_memory_utilization",
+        "retry_delay",
+        "timeout",
+    ):
         if key in coerced:
             coerced[key] = _coerce_float(coerced[key])
     for key in (
@@ -175,6 +182,7 @@ def _coerce_numeric_fields(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 # ── Provider name normalization ───────────────────────────────────────────
 
+
 def _normalize_provider_name(provider_name: str) -> str:
     normalized = (provider_name or "").strip().lower()
     if normalized == "gemini-devmate":
@@ -182,12 +190,20 @@ def _normalize_provider_name(provider_name: str) -> str:
     return normalized
 
 
+def _get_configured_providers() -> set:
+    """Return the set of provider names defined in llm_config.yaml."""
+    config = load_llm_config()
+    return set(config.get("providers", {}).keys())
+
+
 def _validate_provider_name(provider_name: str) -> str:
     normalized = _normalize_provider_name(provider_name)
-    if normalized not in PRISMLLMClient.SUPPORTED_PROVIDERS:
-        raise ValueError(
-            f"Unknown provider '{provider_name}'. "
-            f"Supported: {', '.join(sorted(PRISMLLMClient.SUPPORTED_PROVIDERS))}"
+    configured = _get_configured_providers()
+    if configured and normalized not in configured:
+        logger.info(
+            "Provider '%s' is not in llm_config.yaml providers section. "
+            "Treating as OpenAI-compatible custom provider.",
+            normalized,
         )
     return normalized
 
@@ -196,13 +212,16 @@ def _validate_provider_name(provider_name: str) -> str:
 # Config Accessors
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def get_aspect_config(aspect_name: str, step: Optional[str] = None) -> Dict[str, Any]:
     """Get merged config for a specific aspect."""
     config = load_llm_config()
     defaults = config.get("defaults", {})
     aspects = config.get("aspects", {})
     if aspect_name not in aspects:
-        raise KeyError(f"Unknown aspect '{aspect_name}'. Available: {', '.join(sorted(aspects))}")
+        raise KeyError(
+            f"Unknown aspect '{aspect_name}'. Available: {', '.join(sorted(aspects))}"
+        )
 
     aspect = aspects[aspect_name] or {}
     if not isinstance(aspect, dict):
@@ -214,7 +233,9 @@ def get_aspect_config(aspect_name: str, step: Optional[str] = None) -> Dict[str,
             raise KeyError(f"Unknown step '{step}' for aspect '{aspect_name}'")
         selected_step = aspect[step]
     else:
-        step_names = [k for k, v in aspect.items() if isinstance(v, dict) and k != "enabled"]
+        step_names = [
+            k for k, v in aspect.items() if isinstance(v, dict) and k != "enabled"
+        ]
         if step_names and not aspect_fields:
             raise ValueError(
                 f"Aspect '{aspect_name}' requires a step. Available: {', '.join(sorted(step_names))}"
@@ -234,7 +255,9 @@ def get_reviewer_config(reviewer_name: str) -> Dict[str, Any]:
     defaults = config.get("defaults", {})
     reviewers = config.get("reviewers", {})
     if reviewer_name not in reviewers:
-        raise KeyError(f"Unknown reviewer '{reviewer_name}'. Available: {', '.join(sorted(reviewers))}")
+        raise KeyError(
+            f"Unknown reviewer '{reviewer_name}'. Available: {', '.join(sorted(reviewers))}"
+        )
     reviewer = reviewers[reviewer_name] or {}
 
     if reviewer.get("type") == "api":
@@ -285,13 +308,16 @@ def get_referenced_api_providers() -> Set[str]:
     for reviewer_name, reviewer in (config.get("reviewers") or {}).items():
         if isinstance(reviewer, dict) and reviewer.get("type") == "api":
             reviewer_cfg = get_reviewer_config(reviewer_name)
-            providers.add(_validate_provider_name(reviewer_cfg.get("provider", "openai")))
+            providers.add(
+                _validate_provider_name(reviewer_cfg.get("provider", "openai"))
+            )
     return providers
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Enable/Disable, Profiles, Listing
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def is_enabled(section: str, name: str) -> bool:
     """Check if a specific aspect or reviewer is enabled in YAML.
@@ -403,6 +429,7 @@ def resolve_items(
 # PRISMLLMClient — Unified Client
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class PRISMLLMClient:
     """
     Unified LLM client for the PRISM project.
@@ -418,16 +445,23 @@ class PRISMLLMClient:
         client = PRISMLLMClient(provider="openai", model="gpt-4o-mini")
     """
 
-    SUPPORTED_PROVIDERS = {"openai", "gemini", "azure", "mimo", "devmate", "openrouter"}
+    # Hardcoded providers for direct API usage without llm_config.yaml.
+    # Any provider name can also be used — it will be read from the YAML
+    # providers section or treated as OpenAI-compatible with a custom base_url.
+    BUILTIN_PROVIDERS = {"openai", "gemini", "azure", "mimo", "devmate", "openrouter"}
 
     # ── Factory Methods ────────────────────────────────────────────────────
 
     @classmethod
-    def for_aspect(cls, aspect_name: str, step: Optional[str] = None, **overrides) -> "PRISMLLMClient":
+    def for_aspect(
+        cls, aspect_name: str, step: Optional[str] = None, **overrides
+    ) -> "PRISMLLMClient":
         """Create a client configured for a specific benchmarking aspect."""
         cfg = get_aspect_config(aspect_name, step)
         cfg.update(overrides)
-        return cls._from_config(cfg, label=f"aspect:{aspect_name}" + (f":{step}" if step else ""))
+        return cls._from_config(
+            cfg, label=f"aspect:{aspect_name}" + (f":{step}" if step else "")
+        )
 
     @classmethod
     def for_reviewer(cls, reviewer_name: str, **overrides) -> "PRISMLLMClient":
@@ -542,6 +576,7 @@ class PRISMLLMClient:
     def _init_openai(self):
         try:
             from openai import OpenAI
+
             kwargs = {"api_key": self.api_key}
             if self.base_url:
                 kwargs["base_url"] = self.base_url
@@ -555,6 +590,7 @@ class PRISMLLMClient:
     def _init_gemini(self):
         try:
             from google import genai
+
             if not self.api_key:
                 raise RuntimeError("Missing Gemini API key. Set GOOGLE_API_KEY.")
             self._client = genai.Client(api_key=self.api_key)
@@ -565,6 +601,7 @@ class PRISMLLMClient:
     def _init_azure(self):
         try:
             from openai import AzureOpenAI
+
             kwargs = {
                 "api_version": self.api_version,
                 "timeout": self.timeout,
@@ -577,13 +614,16 @@ class PRISMLLMClient:
             if self.deployment:
                 kwargs["azure_deployment"] = self.deployment
             self._client = AzureOpenAI(**kwargs)
-            logger.info(f"[{self.label}] Azure OpenAI ready (deployment={self.deployment or self.model})")
+            logger.info(
+                f"[{self.label}] Azure OpenAI ready (deployment={self.deployment or self.model})"
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to init Azure OpenAI client: {e}") from e
 
     def _init_openai_compatible(self, name: str):
         try:
             from openai import OpenAI
+
             if not self.api_key:
                 raise RuntimeError(f"Missing API key for {name}.")
             self._client = OpenAI(
@@ -600,6 +640,7 @@ class PRISMLLMClient:
         try:
             import httpx
             from openai import OpenAI
+
             if not self.api_key:
                 raise RuntimeError("Missing Devmate API key.")
 
@@ -618,7 +659,9 @@ class PRISMLLMClient:
                 timeout=self.timeout,
                 max_retries=0,
             )
-            logger.info(f"[{self.label}] Devmate ready (model={self.model}, proxy={'on' if self.proxy else 'off'})")
+            logger.info(
+                f"[{self.label}] Devmate ready (model={self.model}, proxy={'on' if self.proxy else 'off'})"
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to init Devmate client: {e}") from e
 
@@ -655,9 +698,15 @@ class PRISMLLMClient:
         temp = self.temperature if temperature is None else temperature
         token_override = max_tokens if max_tokens is not None else max_output_tokens
         model_override = model if model is not None else deployment
-        tokens = self.max_tokens if token_override is None else _coerce_int(token_override, self.max_tokens)
+        tokens = (
+            self.max_tokens
+            if token_override is None
+            else _coerce_int(token_override, self.max_tokens)
+        )
         mdl = self.model if model_override is None else model_override
-        json_mode = response_format is not None and response_format.get("type") == "json_object"
+        json_mode = (
+            response_format is not None and response_format.get("type") == "json_object"
+        )
 
         logger.debug(
             "[%s] LLM call provider=%s model=%s temperature=%s max_tokens=%s "
@@ -673,7 +722,9 @@ class PRISMLLMClient:
         )
 
         if self.provider == "gemini":
-            return self._call_gemini(system_prompt, user_prompt, temp, tokens, mdl, json_mode)
+            return self._call_gemini(
+                system_prompt, user_prompt, temp, tokens, mdl, json_mode
+            )
         else:
             return self._call_openai_compat(
                 system_prompt,
@@ -709,7 +760,8 @@ class PRISMLLMClient:
         """
         sys_prompt = system_prompt or "You are a helpful assistant."
         return self.generate_text(
-            sys_prompt, prompt,
+            sys_prompt,
+            prompt,
             temperature=temperature,
             max_tokens=max_tokens,
             model=model,
@@ -731,7 +783,8 @@ class PRISMLLMClient:
             Parsed JSON dict, or None if parsing fails.
         """
         raw = self.generate_text(
-            system_prompt, user_prompt,
+            system_prompt,
+            user_prompt,
             response_format={"type": "json_object"},
             temperature=temperature,
             max_tokens=max_tokens,
@@ -794,7 +847,9 @@ class PRISMLLMClient:
                 if json_mode and "response_format" in err.lower():
                     request_kwargs.pop("response_format", None)
                     continue
-                logger.warning(f"[{self.label}] API call failed (attempt {attempt+1}): {exc}")
+                logger.warning(
+                    f"[{self.label}] API call failed (attempt {attempt + 1}): {exc}"
+                )
                 if attempt == attempts - 1:
                     raise
                 time.sleep(self.retry_delay)
@@ -831,7 +886,9 @@ class PRISMLLMClient:
                 )
                 return (resp.text or "").strip()
             except Exception as exc:
-                logger.warning(f"[{self.label}] Gemini call failed (attempt {attempt+1}): {exc}")
+                logger.warning(
+                    f"[{self.label}] Gemini call failed (attempt {attempt + 1}): {exc}"
+                )
                 if attempt == attempts - 1:
                     raise
                 time.sleep(self.retry_delay)
@@ -892,7 +949,7 @@ class PRISMLLMClient:
             if ch in "{[":
                 try:
                     _, end = decoder.raw_decode(text, start)
-                    candidate = text[start:start + end]
+                    candidate = text[start : start + end]
                     parsed = json.loads(candidate)
                     if isinstance(parsed, dict):
                         return parsed
