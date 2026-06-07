@@ -33,20 +33,14 @@ Aspects_benchmarking/
 │   ├── evaluate_all.py         # batch evaluation across all conferences
 │   ├── calculate_metrics.py    # R_Premise, Avg_GS, DoA_HM computation
 │   ├── compare_human_llm.py    # Human vs LLM comparison analysis
-│   ├── compare_gemini_mimo_metrics.py  # evaluator robustness analysis
-│   ├── run_human.py            # ICLR 2026 human reviews (Gemini)
-│   ├── run_human_mimo.py       # any conference — human reviews (Mimo)
-│   ├── run_human_icml2025.py   # ICML 2025 human reviews (Gemini)
-│   ├── run_human_icml2025_mimo.py  # ICML 2025 human reviews (Mimo)
-│   ├── run_human_neurips2025.py    # NeurIPS 2025 human reviews (Gemini)
-│   ├── run_llm.py              # LLM reviews (Gemini)
-│   └── run_llm_mimo.py         # LLM reviews (Mimo)
+│   ├── run_human.py            # any conference — human reviews
+│   ├── run_human_icml2025.py   # ICML 2025 human reviews
+│   ├── run_human_neurips2025.py    # NeurIPS 2025 human reviews
+│   └── run_llm.py              # LLM reviews
 │
 ├── constructiveness/           # multi-dimensional constructiveness pipeline
 │   ├── paths_config.py         # conference paths (reads .env via env_loader)
-│   ├── run_constructiveness.py      # Gemini evaluator
-│   ├── run_constructiveness_mimo.py # Mimo evaluator
-│   ├── compute_mimo_vs_gemini.py    # Gemini vs Mimo comparison
+│   ├── run_constructiveness.py # unified evaluator (provider from llm_config.yaml)
 │   ├── compute_per_reviewer_metrics.py
 │   ├── evaluate_results.py
 │   └── src/
@@ -57,18 +51,12 @@ Aspects_benchmarking/
 │
 ├── flaw_identification/        # CFI + CPS (nCPS prioritization) pipeline
 │   ├── paths_config.py         # conference paths (reads .env via env_loader)
-│   ├── main_cfi_iclr2024.py   # ICLR 2024 — Gemini evaluator
-│   ├── main_cfi_iclr2024_mimo.py  # ICLR 2024 — Mimo evaluator
-│   ├── main_cfi_iclr2025.py   # ICLR 2025 — Gemini
-│   ├── main_cfi_iclr2025_mimo.py
-│   ├── main_cfi_iclr2026.py   # ICLR 2026 — Gemini
-│   ├── main_cfi_iclr2026_mimo.py
-│   ├── main_cfi_icml2025.py   # ICML 2025 — Gemini
-│   ├── main_cfi_icml2025_mimo.py
-│   ├── main_cfi_neurips2025.py  # NeurIPS 2025 — Gemini
-│   ├── main_cfi_neurips2025_mimo.py
+│   ├── main_cfi_iclr2024.py   # ICLR 2024
+│   ├── main_cfi_iclr2025.py   # ICLR 2025
+│   ├── main_cfi_iclr2026.py   # ICLR 2026
+│   ├── main_cfi_icml2025.py   # ICML 2025
+│   ├── main_cfi_neurips2025.py  # NeurIPS 2025
 │   ├── compute_flaw_metrics.py
-│   ├── compute_flaw_mimo_vs_gemini.py
 │   └── src/
 │       ├── evaluator.py
 │       ├── cfi_metrics.py      # Critical/Minor Recall
@@ -79,7 +67,7 @@ Aspects_benchmarking/
 │       └── utils.py
 │
 └── figures/
-    ├── combined_6metrics.pdf   # all 6 metrics: Gemini vs Mimo (paper figure)
+    ├── combined_6metrics.pdf   # all 6 metrics (paper figure)
     └── combined_5metrics.pdf
 ```
 
@@ -222,21 +210,18 @@ python depth_of_analysis/run_llm.py --source tree_icml2025
 python depth_of_analysis/run_llm.py --source cyclereview_neurips2025
 ```
 
-Available `--source` values (defined in `depth_of_analysis/config.py`):  
+Available `--source` values (defined in `depth_of_analysis/config.py``:  
 `sea_iclr2024/2025/2026`, `sea_icml2025`, `sea_neurlps2025`,  
 `tree_iclr2024/2025/2026`, `tree_icml2025`, `tree_neurips2025`,  
 `reviewer2_iclr2024/2025/2026`, `reviewer2_icml2025`, `reviewer2_neurips2025`,  
 `deepreview_iclr2024/2025/2026`, `deepreview_icml2025`, `deepreview_neurips2025`,  
 `cyclereview_iclr2024/2025/2026`, `cyclereview_icml2025`, `cyclereview_neurlps2025`
 
-#### LLM Reviews — Mimo evaluator
+The runner reads the active LLM provider/model from `llm_config.yaml`. Use
+`llm_config.yaml` to switch between evaluators (Gemini, Mimo, OpenAI, etc.)
+without changing the script.
 
-```bash
-python depth_of_analysis/run_llm_mimo.py --source sea_iclr2025
-python depth_of_analysis/run_llm_mimo.py --source deepreview_iclr2024
-```
-
-#### Human Reviews — Gemini evaluator
+#### Human Reviews
 
 ```bash
 # ICLR 2026  (default run_human.py)
@@ -248,26 +233,18 @@ python depth_of_analysis/run_human_icml2025.py
 # NeurIPS 2025
 python depth_of_analysis/run_human_neurips2025.py
 
-# Any conference using the generic Mimo runner (Gemini also supported via --provider gemini)
-python depth_of_analysis/run_human_mimo.py --conference ICLR2024
-python depth_of_analysis/run_human_mimo.py --conference ICLR2025
-python depth_of_analysis/run_human_mimo.py --conference ICLR2026
-python depth_of_analysis/run_human_mimo.py --conference ICML2025
-python depth_of_analysis/run_human_mimo.py --conference NeurIPS2025
-```
-
-#### Human Reviews — Mimo evaluator
-
-```bash
-python depth_of_analysis/run_human_mimo.py --conference ICLR2024
-python depth_of_analysis/run_human_mimo.py --conference NeurIPS2025
-python depth_of_analysis/run_human_icml2025_mimo.py
+# Any conference (provider is read from llm_config.yaml)
+python depth_of_analysis/run_human.py --conference ICLR2024
+python depth_of_analysis/run_human.py --conference ICLR2025
+python depth_of_analysis/run_human.py --conference ICLR2026
+python depth_of_analysis/run_human.py --conference ICML2025
+python depth_of_analysis/run_human.py --conference NeurIPS2025
 ```
 
 #### Compute metrics table
 
 ```bash
-python depth_of_analysis/compare_gemini_mimo_metrics.py --quiet --save_csv
+python depth_of_analysis/evaluate_all.py --conference iclr2024
 ```
 
 ---
@@ -299,26 +276,9 @@ python constructiveness/run_constructiveness.py --mode icml_human
 python constructiveness/run_constructiveness.py --mode neurips_human
 ```
 
-#### LLM + Human Reviews — Mimo evaluator
-
-```bash
-# LLM
-python constructiveness/run_constructiveness_mimo.py --mode reviewer2  --conf iclr2025
-python constructiveness/run_constructiveness_mimo.py --mode sea        --conf icml2025
-python constructiveness/run_constructiveness_mimo.py --mode deepreview --conf neurips2025
-python constructiveness/run_constructiveness_mimo.py --mode tree       --conf iclr2025
-python constructiveness/run_constructiveness_mimo.py --mode cyclereview --conf iclr2024
-
-# Human
-python constructiveness/run_constructiveness_mimo.py --mode human      --conf iclr2024
-python constructiveness/run_constructiveness_mimo.py --mode icml_human
-python constructiveness/run_constructiveness_mimo.py --mode neurips_human
-```
-
 #### Aggregate & compare
 
 ```bash
-python constructiveness/compute_mimo_vs_gemini.py
 python constructiveness/compute_per_reviewer_metrics.py
 python constructiveness/evaluate_results.py
 ```
@@ -364,22 +324,14 @@ python flaw_identification/main_cfi_icml2025.py    --mode cfi_only --llm-type hu
 python flaw_identification/main_cfi_neurips2025.py --mode cfi_only --llm-type human
 ```
 
-#### LLM + Human Reviews — Mimo evaluator
-
-```bash
-python flaw_identification/main_cfi_iclr2024_mimo.py    --mode cfi_only --llm-type sea
-python flaw_identification/main_cfi_iclr2024_mimo.py    --mode cfi_only --llm-type human
-python flaw_identification/main_cfi_iclr2025_mimo.py    --mode cfi_only --llm-type reviewer2
-python flaw_identification/main_cfi_iclr2026_mimo.py    --mode cfi_only --llm-type tree
-python flaw_identification/main_cfi_icml2025_mimo.py    --mode cfi_only --llm-type deepreview
-python flaw_identification/main_cfi_neurips2025_mimo.py --mode cfi_only --llm-type human
-```
+The runner reads the active LLM provider/model from `llm_config.yaml`. Use
+`llm_config.yaml` to switch between evaluators (Gemini, Mimo, OpenAI, etc.)
+without changing the script.
 
 #### Aggregate & compare
 
 ```bash
 python flaw_identification/compute_flaw_metrics.py
-python flaw_identification/compute_flaw_mimo_vs_gemini.py
 ```
 
 ---

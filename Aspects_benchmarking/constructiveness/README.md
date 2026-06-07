@@ -20,17 +20,13 @@ Evaluates multi-dimensional constructiveness of reviews via a 2-phase pipeline:
 ## Run
 
 ```bash
-# Gemini evaluator
+# Provider/model is read from llm_config.yaml — switch evaluators there.
 python run_constructiveness.py --mode reviewer2 --conf iclr2025
 python run_constructiveness.py --mode human     --conf icml2025
 python run_constructiveness.py --mode deepreview --conf neurips2025
+python run_constructiveness.py --mode sea --conf iclr2024
 
-# Mimo evaluator
-python run_constructiveness_mimo.py --mode reviewer2 --conf iclr2025
-python run_constructiveness_mimo.py --mode sea --conf iclr2024
-
-# Analysis  
-python compute_mimo_vs_gemini.py          # Gemini vs Mimo comparison table + CSVs
+# Analysis
 python compute_per_reviewer_metrics.py    # Per-reviewer breakdown
 ```
 

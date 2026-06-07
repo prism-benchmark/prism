@@ -25,6 +25,7 @@ from typing import Any, Dict, Optional
 _REPO_ROOT = Path(__file__).parent
 try:
     from dotenv import load_dotenv
+
     load_dotenv(_REPO_ROOT / ".env", override=False)
 except ImportError:
     pass
@@ -54,6 +55,7 @@ from llm_client import (  # noqa: F401
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
+
 def _as_bool(value: Any, default: bool = False) -> bool:
     if value is None or value == "":
         return default
@@ -76,6 +78,7 @@ def _as_float(value: Any, default: float) -> float:
 
 def _provider_name(provider: str) -> str:
     from llm_client import _normalize_provider_name
+
     return _normalize_provider_name(provider)
 
 
@@ -126,9 +129,13 @@ OPENAI_API_KEY: str = str(_provider_credentials("openai").get("api_key") or "")
 # Azure OpenAI
 _AZURE_CREDS = _provider_credentials("azure")
 AZURE_OPENAI_API_KEY: str = str(_AZURE_CREDS.get("api_key") or "")
-AZURE_OPENAI_ENDPOINT: str = str(_AZURE_CREDS.get("endpoint") or _AZURE_CREDS.get("base_url") or "")
+AZURE_OPENAI_ENDPOINT: str = str(
+    _AZURE_CREDS.get("endpoint") or _AZURE_CREDS.get("base_url") or ""
+)
 AZURE_OPENAI_DEPLOYMENT: str = str(
-    _AZURE_CREDS.get("deployment") or _provider_defaults("azure").get("default_model") or "gpt-4o"
+    _AZURE_CREDS.get("deployment")
+    or _provider_defaults("azure").get("default_model")
+    or "gpt-4o"
 )
 
 # Xiaomi Mimo
@@ -156,41 +163,64 @@ if not SEMANTIC_SCHOLAR_API_KEYS and SEMANTIC_SCHOLAR_API_KEY:
 # Legacy Model Names / IDs
 # ============================================================================
 
-GEMINI_MODEL: str = str(_provider_defaults("gemini").get("default_model") or "gemini-2.5-flash-lite")
+GEMINI_MODEL: str = str(
+    _provider_defaults("gemini").get("default_model") or "gemini-2.5-flash-lite"
+)
 GPT_MODEL: str = str(_provider_defaults("openai").get("default_model") or "gpt-4o-mini")
-MIMO_MODEL: str = str(_provider_defaults("mimo").get("default_model") or "mimo-v2.5-pro")
+MIMO_MODEL: str = str(
+    _provider_defaults("mimo").get("default_model") or "mimo-v2.5-pro"
+)
 
 # Generic LLM provider / model (used by novelty verification)
 try:
     _NOVELTY_CFG = get_aspect_config("novelty")
 except Exception:
     _NOVELTY_CFG = {}
-LLM_PROVIDER: str = str(_NOVELTY_CFG.get("provider") or os.getenv("LLM_PROVIDER", "openai"))
-LLM_MODEL_NAME: str = str(_NOVELTY_CFG.get("model") or _provider_defaults(LLM_PROVIDER).get("default_model") or "gpt-4o")
+LLM_PROVIDER: str = str(
+    _NOVELTY_CFG.get("provider") or os.getenv("LLM_PROVIDER", "openai")
+)
+LLM_MODEL_NAME: str = str(
+    _NOVELTY_CFG.get("model")
+    or _provider_defaults(LLM_PROVIDER).get("default_model")
+    or "gpt-4o"
+)
 _LLM_CREDS = _provider_credentials(LLM_PROVIDER)
 LLM_API_KEY: str = str(_NOVELTY_CFG.get("api_key") or _LLM_CREDS.get("api_key") or "")
 LLM_API_ENDPOINT: str = str(
-    _NOVELTY_CFG.get("base_url") or _LLM_CREDS.get("base_url") or _LLM_CREDS.get("endpoint") or ""
+    _NOVELTY_CFG.get("base_url")
+    or _LLM_CREDS.get("base_url")
+    or _LLM_CREDS.get("endpoint")
+    or ""
 )
 
-# Bosch Devmate
+# Devmate
 _DEVMATE_CREDS = _provider_credentials("devmate")
-GEMINI_DEVMATE_MODEL: str = str(_provider_defaults("devmate").get("default_model") or "gemini-3-flash-preview")
+GEMINI_DEVMATE_MODEL: str = str(
+    _provider_defaults("devmate").get("default_model") or "gemini-3-flash-preview"
+)
 DEVMATE_API_KEY: str = str(_DEVMATE_CREDS.get("api_key") or "")
 DEVMATE_BASE_URL: str = str(_DEVMATE_CREDS.get("base_url") or "")
 DEVMATE_PROXY: str = str(_DEVMATE_CREDS.get("proxy") or "")
-DEVMATE_DISABLE_SSL_VERIFY: bool = _as_bool(_DEVMATE_CREDS.get("disable_ssl_verify"), True)
+DEVMATE_DISABLE_SSL_VERIFY: bool = _as_bool(
+    _DEVMATE_CREDS.get("disable_ssl_verify"), True
+)
 
 
 # ============================================================================
 # Legacy Inference Defaults
 # ============================================================================
 
-GEMINI_TEMP: float = _as_float(_provider_defaults("gemini").get("default_temperature"), 0.0)
-GPT_TEMP: float = _as_float(_provider_defaults("openai").get("default_temperature"), 1.0)
+GEMINI_TEMP: float = _as_float(
+    _provider_defaults("gemini").get("default_temperature"), 0.0
+)
+GPT_TEMP: float = _as_float(
+    _provider_defaults("openai").get("default_temperature"), 1.0
+)
 MIMO_TEMP: float = _as_float(_provider_defaults("mimo").get("default_temperature"), 0.0)
 
-DEFAULT_MAX_OUTPUT_TOKENS: int = _as_int(load_llm_config().get("defaults", {}).get("max_tokens"), 4096)
+DEFAULT_MAX_OUTPUT_TOKENS: int = _as_int(
+    load_llm_config().get("defaults", {}).get("max_tokens"), 4096
+)
 LLM_MAX_TOKENS: int = _as_int(_NOVELTY_CFG.get("max_tokens"), DEFAULT_MAX_OUTPUT_TOKENS)
 LLM_PROVIDER_CAP: int = int(os.getenv("LLM_PROVIDER_CAP", "64000"))
 EFFECTIVE_LLM_MAX_TOKENS: int = min(LLM_MAX_TOKENS, LLM_PROVIDER_CAP)
@@ -203,11 +233,13 @@ API_TIMEOUT: int = _as_int(
     120,
 )
 MAX_RETRIES: int = _as_int(
-    _NOVELTY_CFG.get("max_retries") or load_llm_config().get("defaults", {}).get("max_retries"),
+    _NOVELTY_CFG.get("max_retries")
+    or load_llm_config().get("defaults", {}).get("max_retries"),
     3,
 )
 RETRY_DELAY: int = _as_int(
-    _NOVELTY_CFG.get("retry_delay") or load_llm_config().get("defaults", {}).get("retry_delay"),
+    _NOVELTY_CFG.get("retry_delay")
+    or load_llm_config().get("defaults", {}).get("retry_delay"),
     1,
 )
 
@@ -220,6 +252,7 @@ PHASE2_MAX_QUERY_ATTEMPTS: int = int(os.getenv("PHASE2_MAX_QUERY_ATTEMPTS", "8")
 # ============================================================================
 # Unified LLM Client Factory
 # ============================================================================
+
 
 def get_llm_client(
     name: str,

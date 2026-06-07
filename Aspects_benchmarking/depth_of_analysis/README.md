@@ -17,21 +17,14 @@ Evaluates the argumentative depth of reviews through a 3-phase pipeline:
 ## Run
 
 ```bash
-# Gemini evaluator
+# Runners (provider/model read from llm_config.yaml)
 python run_human.py          # human reviews, all ICLR conferences
 python run_llm.py            # LLM reviews, ICLR (sea/tree/reviewer2/deepreview/cyclereview)
 python run_human_icml2025.py # human reviews, ICML 2025
 python run_human_neurips2025.py
 
-# Mimo evaluator
-python run_human_mimo.py
-python run_llm_mimo.py
-python run_human_icml2025_mimo.py
-python run_human_neurips2025_mimo.py
-
 # Analysis
 python calculate_metrics.py              # compute DoA metrics from outputs
-python compare_gemini_mimo_metrics.py --quiet --save_csv --plot_2
 python compare_human_llm.py
 ```
 

@@ -2,7 +2,7 @@
 """Download the PRISM subset artifacts from Hugging Face.
 
 The dataset README documents two subset files in
-`anoyresearcher/prism_paper_data`:
+`anonymous/prism-benchmark-data`:
 
 - `subset_1000.parquet`: lightweight metadata table.
 - `SUBSET_1000.zip`: full 1,000-paper subset with file-based data.
@@ -20,7 +20,7 @@ import zipfile
 from pathlib import Path
 from urllib.parse import quote
 
-REPO_ID = "anoyresearcher/prism_paper_data"
+REPO_ID = "anonymous/prism-benchmark-data"
 REPO_TYPE = "dataset"
 REVISION = "main"
 SUBSET_METADATA = "subset_1000.parquet"
@@ -71,7 +71,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def download_file(filename: str, output_dir: Path, token: str | None, force: bool) -> Path:
+def download_file(
+    filename: str, output_dir: Path, token: str | None, force: bool
+) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:

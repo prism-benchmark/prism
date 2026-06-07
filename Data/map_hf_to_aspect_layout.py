@@ -45,43 +45,68 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Map Hugging Face venue folder -> aspect-benchmark conference folder.
 VENUE_MAP = {
-    "ICLR_2024":    "ICLR2024",
-    "ICLR_2025":    "ICLR2025",
-    "ICLR_2026":    "ICLR2026",
-    "ICML_2025":    "ICML2025",
+    "ICLR_2024": "ICLR2024",
+    "ICLR_2025": "ICLR2025",
+    "ICLR_2026": "ICLR2026",
+    "ICML_2025": "ICML2025",
     "NeurIPS_2025": "Neurlps2025",  # dataset folder spelling
 }
 
 # Per-conference reviewer subfolders expected by the aspect scripts.
 # These are placeholders; LLM-reviewer outputs are produced by LLM_reviewer/.
 LLM_REVIEWER_SUFFIXES = {
-    "ICLR2024":    ["sea_iclr2024",    "tree_iclr2024",    "reviewer2_iclr2024",
-                    "deepreview_iclr2024",    "cyclereview_iclr2024"],
-    "ICLR2025":    ["sea_iclr2025",    "tree_iclr2025",    "reviewer2_iclr2025",
-                    "deepreview_iclr2025",    "cyclereview_iclr2025"],
-    "ICLR2026":    ["sea_iclr2026",    "tree_iclr2026",    "reviewer2_iclr2026",
-                    "deepreview_iclr2026",    "cyclereview_iclr2026"],
-    "ICML2025":    ["sea_icml2025",    "tree_icml2025",    "reviewer2_icml2025",
-                    "deepreview_icml2025",    "cyclereview_icml2025"],
-    "Neurlps2025": ["sea_neurlps2025", "tree_neurips2025", "reviewer2_neurips2025",
-                    "deepreview_neurips2025", "cyclereview_neurlps2025"],
+    "ICLR2024": [
+        "sea_iclr2024",
+        "tree_iclr2024",
+        "reviewer2_iclr2024",
+        "deepreview_iclr2024",
+        "cyclereview_iclr2024",
+    ],
+    "ICLR2025": [
+        "sea_iclr2025",
+        "tree_iclr2025",
+        "reviewer2_iclr2025",
+        "deepreview_iclr2025",
+        "cyclereview_iclr2025",
+    ],
+    "ICLR2026": [
+        "sea_iclr2026",
+        "tree_iclr2026",
+        "reviewer2_iclr2026",
+        "deepreview_iclr2026",
+        "cyclereview_iclr2026",
+    ],
+    "ICML2025": [
+        "sea_icml2025",
+        "tree_icml2025",
+        "reviewer2_icml2025",
+        "deepreview_icml2025",
+        "cyclereview_icml2025",
+    ],
+    "Neurlps2025": [
+        "sea_neurlps2025",
+        "tree_neurips2025",
+        "reviewer2_neurips2025",
+        "deepreview_neurips2025",
+        "cyclereview_neurlps2025",
+    ],
 }
 
 # `paper_ids_200_*` filename per conference (the script then writes
 # `paper_ids_50_*` from that list via prepare_aspect_benchmark_data.py).
 ID_200_NAMES = {
-    "ICLR2024":    "paper_ids_200_iclr2024.txt",
-    "ICLR2025":    "paper_ids_200_iclr2025.txt",
-    "ICLR2026":    "paper_ids_200_iclr2026.txt",
-    "ICML2025":    "paper_ids_200_icml2025.txt",
+    "ICLR2024": "paper_ids_200_iclr2024.txt",
+    "ICLR2025": "paper_ids_200_iclr2025.txt",
+    "ICLR2026": "paper_ids_200_iclr2026.txt",
+    "ICML2025": "paper_ids_200_icml2025.txt",
     "Neurlps2025": "paper_ids_200_neurlps2025.txt",
 }
 
 ID_50_NAMES = {
-    "ICLR2024":    ["paper_ids_50_iclr2024.txt"],
-    "ICLR2025":    ["paper_ids_50_iclr2025.txt"],
-    "ICLR2026":    ["paper_ids_50_iclr2026.txt"],
-    "ICML2025":    ["paper_ids_50_icml2025.txt"],
+    "ICLR2024": ["paper_ids_50_iclr2024.txt"],
+    "ICLR2025": ["paper_ids_50_iclr2025.txt"],
+    "ICLR2026": ["paper_ids_50_iclr2026.txt"],
+    "ICML2025": ["paper_ids_50_icml2025.txt"],
     # env_loader looks up `paper_ids_50_neurips2025.txt`, the preparer
     # also writes the dataset-spelled `_neurlps2025` for compatibility.
     "Neurlps2025": ["paper_ids_50_neurips2025.txt", "paper_ids_50_neurlps2025.txt"],
@@ -91,6 +116,7 @@ ID_50_NAMES = {
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -169,6 +195,7 @@ def parse_args() -> argparse.Namespace:
 # Source resolution (zip or directory)
 # ---------------------------------------------------------------------------
 
+
 def safe_extract(zip_path: Path, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
     target_root = target_dir.resolve()
@@ -226,6 +253,7 @@ def resolve_source(source: Path, keep_extracted: bool) -> Path:
 # File materialization
 # ---------------------------------------------------------------------------
 
+
 def materialize(src: Path, dst: Path, mode: str) -> None:
     if dst.exists() or dst.is_symlink():
         dst.unlink()
@@ -271,8 +299,8 @@ def collect_paper_ids(venue_dir: Path) -> list[str]:
 def find_paper_text(venue_dir: Path, paper_id: str) -> Path | None:
     """Pick the best paper text source for `papers/{paper_id}.grobid.txt`."""
     candidates = [
-        venue_dir / "grobid_fulltext"  / f"{paper_id}.grobid.txt",
-        venue_dir / "txt"              / f"{paper_id}.txt",
+        venue_dir / "grobid_fulltext" / f"{paper_id}.grobid.txt",
+        venue_dir / "txt" / f"{paper_id}.txt",
     ]
     for path in candidates:
         if path.is_file():
@@ -288,7 +316,7 @@ def map_venue(
     mode: str,
     max_papers: int,
 ) -> tuple[int, int]:
-    venue_in  = hf_root / hf_name
+    venue_in = hf_root / hf_name
     venue_out = out_root / out_name
     venue_out.mkdir(parents=True, exist_ok=True)
 
@@ -300,13 +328,13 @@ def map_venue(
         print(f"  [{out_name}] no paper IDs found in {venue_in}")
         return (0, 0)
 
-    human_dir  = venue_out / "human_reviews"
+    human_dir = venue_out / "human_reviews"
     papers_dir = venue_out / "papers"
     human_dir.mkdir(exist_ok=True)
     papers_dir.mkdir(exist_ok=True)
 
     n_reviews = 0
-    n_papers  = 0
+    n_papers = 0
     for pid in paper_ids:
         review_src = venue_in / "json" / f"{pid}.json"
         if review_src.exists():
@@ -339,13 +367,18 @@ def map_venue(
 # Subset id files + .env
 # ---------------------------------------------------------------------------
 
+
 def write_subset_files(out_root: Path, subset_size: int) -> None:
     for out_name, id200_name in ID_200_NAMES.items():
         venue_dir = out_root / out_name
         ids_file = venue_dir / id200_name
         if not ids_file.exists():
             continue
-        ids = [ln.strip() for ln in ids_file.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        ids = [
+            ln.strip()
+            for ln in ids_file.read_text(encoding="utf-8").splitlines()
+            if ln.strip()
+        ]
         subset = ids[: min(subset_size, len(ids))]
         for fname in ID_50_NAMES[out_name]:
             (venue_dir / fname).write_text("\n".join(subset) + "\n", encoding="utf-8")
@@ -411,7 +444,9 @@ def update_aspect_env(data_root: Path) -> None:
         lines = env_path.read_text(encoding="utf-8").splitlines()
     else:
         example = env_path.with_name(".env.example")
-        lines = example.read_text(encoding="utf-8").splitlines() if example.exists() else []
+        lines = (
+            example.read_text(encoding="utf-8").splitlines() if example.exists() else []
+        )
 
     new_line = f"DATA_ROOT={data_root.resolve()}"
     found = False
@@ -429,6 +464,7 @@ def update_aspect_env(data_root: Path) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     args = parse_args()
@@ -458,14 +494,20 @@ def main() -> int:
             print(f"  [skip] missing venue folder: {hf_name}")
             continue
         r, p = map_venue(
-            hf_root, out_root, hf_name, out_name,
-            args.mode, args.max_papers_per_venue,
+            hf_root,
+            out_root,
+            hf_name,
+            out_name,
+            args.mode,
+            args.max_papers_per_venue,
         )
         total_reviews += r
-        total_papers  += p
+        total_papers += p
 
     write_subset_files(out_root, args.paper_id_subset_size)
-    print(f"Mapped {total_reviews} reviews and {total_papers} papers across {len(VENUE_MAP)} venues.")
+    print(
+        f"Mapped {total_reviews} reviews and {total_papers} papers across {len(VENUE_MAP)} venues."
+    )
 
     if args.overlay is not None:
         overlay_sample(out_root, args.overlay)
@@ -479,7 +521,7 @@ def main() -> int:
     print("Next:")
     print(f"  export DATA_ROOT={out_root}")
     print("  cd Aspects_benchmarking && pip install -r requirements.txt")
-    print("  python depth_of_analysis/run_human_mimo.py --conference ICLR2025")
+    print("  python depth_of_analysis/run_human.py --conference ICLR2025")
     return 0
 
 

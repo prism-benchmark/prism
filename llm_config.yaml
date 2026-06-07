@@ -91,7 +91,7 @@ providers:
 
   devmate:
     api_key: ${DEVMATE_API_KEY}
-    base_url: ${DEVMATE_BASE_URL:https://devmate.bosch.com/api/v3}
+    base_url: ${DEVMATE_BASE_URL:}
     proxy: ${DEVMATE_PROXY:}
     disable_ssl_verify: ${DEVMATE_DISABLE_SSL_VERIFY:true}
 

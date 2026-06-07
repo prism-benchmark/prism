@@ -1,5 +1,5 @@
 """
-llm_client.py — Unified LLM Client & Config for the entire PRISM project.
+llm_client.py — Unified LLM Client & Config.
 
 Single entry point for ALL LLM config and API calls. Supports:
   - OpenAI, Gemini, Azure, Mimo, Devmate, OpenRouter

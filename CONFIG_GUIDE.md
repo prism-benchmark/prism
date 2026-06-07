@@ -1,4 +1,4 @@
-# PRISM Unified LLM Configuration Guide
+# Unified LLM Configuration Guide
 
 > **Single file. Single client. Run everything or just what you need.**
 
@@ -296,8 +296,8 @@ providers:
 
   devmate:
     api_key: ${DEVMATE_API_KEY}
-    base_url: ${DEVMATE_BASE_URL:https://devmate.bosch.com/api/v3}
-    proxy: ${DEVMATE_PROXY:}            # empty default = no proxy
+    base_url: ${DEVMATE_BASE_URL:}
+    proxy: ${DEVMATE_PROXY:}
     disable_ssl_verify: ${DEVMATE_DISABLE_SSL_VERIFY:true}
 ```
 
@@ -318,7 +318,7 @@ LLM_API_KEY=...           # used by openrouter
 | `gemini`      | google-genai  | Native Gemini SDK                   |
 | `azure`       | openai        | Azure OpenAI (needs deployment)     |
 | `mimo`        | openai        | Xiaomi Mimo (OpenAI-compatible)     |
-| `devmate`     | openai        | Bosch Devmate (with proxy/SSL)      |
+| `devmate`     | openai        | Custom Devmate (with proxy/SSL)      |
 | `openrouter`  | openai        | OpenRouter (OpenAI-compatible)      |
 
 ### Adding any OpenAI-compatible provider

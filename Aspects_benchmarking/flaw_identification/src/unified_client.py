@@ -1,6 +1,6 @@
 """
 UnifiedChatClient – thin adapter so ReviewEvaluatorPipeline can use
-OpenAI (native), Google Gemini, or Bosch Devmate Gemini through the
+OpenAI (native), Google Gemini, or Devmate Gemini through the
 exact same interface as AzureChatClient.generate_text().
 
 Usage:

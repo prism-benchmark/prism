@@ -1,7 +1,3 @@
-# PRISM: A Multi-Dimensional Benchmark for Evaluating LLM Peer Reviewers
-
-> Code for the PRISM benchmark: [https://github.com/prism-benchmark/prism-benchmark.github.io](https://github.com/prism-benchmark/prism-benchmark.github.io)
-
 ```bash
 # TLDR — reproduce all paper results in 4 commands:
 pip install -r requirements.txt          # 1. install deps

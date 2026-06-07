@@ -22,7 +22,7 @@ where `w_i = 2` for Critical, `w_i = 1` for Minor
 ## Run
 
 ```bash
-# ── Gemini evaluator ──────────────────────────────────────────────────
+# Provider/model is read from llm_config.yaml — switch evaluators there.
 # Step 1+2 only (CFI metrics)
 python main_cfi_iclr2024.py --mode cfi_only --llm-type reviewer2
 
@@ -32,18 +32,13 @@ python main_cfi_iclr2024.py --mode all --llm-type deepreview
 # CPS from cached results (fast, no re-extraction)
 python main_cfi_iclr2024.py --mode cps_only --llm-type sea
 
-# ── Mimo evaluator ────────────────────────────────────────────────────
-python main_cfi_iclr2024_mimo.py --mode cfi_only --llm-type reviewer2
-python main_cfi_iclr2024_mimo.py --mode cps_only --llm-type reviewer2
-
 # ── Other conferences (same pattern) ─────────────────────────────────
 python main_cfi_iclr2025.py --mode all --llm-type sea
 python main_cfi_icml2025.py --mode cfi_only --llm-type tree
 python main_cfi_neurips2025.py --mode all --llm-type cyclereview
 
 # ── Aggregate analysis ────────────────────────────────────────────────
-python compute_flaw_metrics.py              # Gemini aggregate
-python compute_flaw_mimo_vs_gemini.py       # Gemini vs Mimo comparison + charts
+python compute_flaw_metrics.py              # aggregate metrics
 ```
 
 ## LLM Types
@@ -62,5 +57,6 @@ python compute_flaw_mimo_vs_gemini.py       # Gemini vs Mimo comparison + charts
 GOOGLE_API_KEY=...          # Gemini evaluator
 MIMO_API_KEY=...            # Mimo evaluator
 AZURE_OPENAI_API_KEY=...    # Azure evaluator (optional)
+OPENAI_API_KEY=...          # OpenAI evaluator (optional)
 ```
 
