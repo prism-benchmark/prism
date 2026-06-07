@@ -1,6 +1,16 @@
-# PRISM: Peer Review Intelligence via Structured Multi-dimensional Assessment
+# PRISM: A Multi-Dimensional Benchmark for Evaluating LLM Peer Reviewers
 
-Reproduce the paper's experiments in 4 steps.
+> Code for the PRISM benchmark: [https://github.com/prism-benchmark/prism-benchmark.github.io](https://github.com/prism-benchmark/prism-benchmark.github.io)
+
+```bash
+# TLDR — reproduce all paper results in 4 commands:
+pip install -r requirements.txt          # 1. install deps
+cp .env.example .env                     # 2. set GOOGLE_API_KEY in .env
+python run.py --setup-data               # 3. download dataset (~4 GB)
+python run.py                            # 4. run all evaluations
+```
+
+> See [CONFIG_GUIDE.md](CONFIG_GUIDE.md) for detailed setup, custom providers, and per-aspect configuration options.
 
 ---
 
