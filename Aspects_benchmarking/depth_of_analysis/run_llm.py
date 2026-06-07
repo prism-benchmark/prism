@@ -309,10 +309,10 @@ def run_llm_pipeline(source_name: str):
         print(f"❌ Thư mục source không tồn tại: {source_dir}")
         sys.exit(1)
 
-    # Khởi tạo evaluator (chỉ Gemini, có retry 5 lần)
-    from src.gemini_client import GeminiEvaluator
-    evaluator = GeminiEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
-    print(f"🤖 Backend: Gemini  |  Model: {config.GEMINI_MODEL}  |  Max Retries: 5")
+    # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
+    from src.evaluator import DepthOfAnalysisEvaluator
+    evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
+    print(f"🤖 Backend: Unified Pluggable Client  |  Model: {config.GEMINI_MODEL}  |  Max Retries: 5")
 
     # Đếm tổng file để hiển thị progress
     if fmt in ("txt", "reviewer2_txt"):

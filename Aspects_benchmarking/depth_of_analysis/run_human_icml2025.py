@@ -1,4 +1,4 @@
-﻿"""
+"""
 run_human_icml2025.py — Phase 1: Xử lý Human reviews cho ICML2025.
 
 Cấu trúc file ICML2025 khác với ICLR2024:
@@ -118,10 +118,10 @@ def load_paper_ids(filepath: str) -> list:
 # ================================================================
 
 def run_human_icml2025_pipeline(paper_ids_file: str = None, run_all: bool = False):
-    # Khởi tạo evaluator (Gemini)
-    from src.gemini_client import GeminiEvaluator
-    evaluator = GeminiEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
-    print(f"🤖 Backend: Gemini  |  Model: {config.GEMINI_MODEL}")
+    # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
+    from src.evaluator import DepthOfAnalysisEvaluator
+    evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
+    print(f"🤖 Backend: Unified Pluggable Client  |  Model: {config.GEMINI_MODEL}")
 
     # Xác định danh sách paper IDs cần xử lý
     if run_all:

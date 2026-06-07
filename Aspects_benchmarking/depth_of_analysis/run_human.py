@@ -59,10 +59,10 @@ def save_result(paper_id: str, result: dict):
 # ================================================================
 
 def run_human_pipeline():
-    # Khởi tạo evaluator (chỉ dùng Gemini)
-    from src.gemini_client import GeminiEvaluator
-    evaluator = GeminiEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
-    print(f"🤖 Backend: Gemini  |  Model: {config.GEMINI_MODEL}")
+    # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
+    from src.evaluator import DepthOfAnalysisEvaluator
+    evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
+    print(f"🤖 Backend: Unified Pluggable Client  |  Model: {config.GEMINI_MODEL}")
 
     # Lấy danh sách tất cả file Human
     all_files = sorted([
