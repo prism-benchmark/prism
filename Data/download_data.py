@@ -2,7 +2,7 @@
 """Download the PRISM subset artifacts from Hugging Face.
 
 The dataset README documents two subset files in
-`anonymous/prism-benchmark-data`:
+`anoyresearcher/prism_paper_data`:
 
 - `subset_1000.parquet`: lightweight metadata table.
 - `SUBSET_1000.zip`: full 1,000-paper subset with file-based data.
@@ -20,7 +20,7 @@ import zipfile
 from pathlib import Path
 from urllib.parse import quote
 
-REPO_ID = "anonymous/prism-benchmark-data"
+REPO_ID = "anoyresearcher/prism_paper_data"
 REPO_TYPE = "dataset"
 REVISION = "main"
 SUBSET_METADATA = "subset_1000.parquet"
