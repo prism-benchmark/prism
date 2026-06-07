@@ -91,7 +91,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--mode", choices=sorted(VALID_MODES), default="cfi_only",
         help="Pipeline mode (default: cfi_only)")
-    parser.add_argument("--provider", choices=sorted(VALID_PROVIDERS), default="gemini",
+    parser.add_argument("--provider", choices=sorted(VALID_PROVIDERS), default=None,
         help="LLM provider (default: gemini)")
     parser.add_argument("--model", default=None,
         help="Override model name. Gemini default: gemini-2.5-flash-lite")
@@ -119,14 +119,8 @@ def parse_args() -> argparse.Namespace:
 # Pipeline construction
 # ---------------------------------------------------------------------------
 
-def _build_pipeline(provider: str, model: str | None) -> ReviewEvaluatorPipeline:
-    if provider == "azure":
-        return ReviewEvaluatorPipeline(api_key=os.getenv("AZURE_OPENAI_API_KEY", ""))
-    from src.unified_client import UnifiedChatClient
-    if model is None and provider == "gemini":
-        model = "gemini-2.5-flash-lite"
-    client = UnifiedChatClient(provider=provider, model=model)
-    return ReviewEvaluatorPipeline(client=client)
+def _build_pipeline(provider: str | None, model: str | None) -> ReviewEvaluatorPipeline:
+    return ReviewEvaluatorPipeline(provider=provider, model=model)
 
 
 # ---------------------------------------------------------------------------

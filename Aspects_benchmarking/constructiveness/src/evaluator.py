@@ -226,12 +226,16 @@ class ConstructivenessEvaluator:
         
         self.deployment = None
 
-        # Use centralized config if available and no explicit provider given
-        if _CENTRALIZED_AVAILABLE and provider is None:
+        # Use centralized config if available
+        if _CENTRALIZED_AVAILABLE:
             try:
                 overrides = {}
+                if provider is not None:
+                    overrides["provider"] = provider
                 if model is not None:
                     overrides["model"] = model
+                if api_key is not None:
+                    overrides["api_key"] = api_key
                 _client = get_llm_client("constructiveness", **overrides)
                 self.client = _client
                 self.provider = _client.provider

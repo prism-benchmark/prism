@@ -1122,6 +1122,71 @@ class OpenRouterClient(BaseLLMClient):
         return None
 
 
+class CentralizedPRISMLLMClient(BaseLLMClient):
+    """BaseLLMClient wrapper that delegates to PRISMLLMClient."""
+
+    def __init__(self, aspect_name: str, overrides: Dict[str, Any]):
+        from llm_client import PRISMLLMClient
+        self.prism_client = PRISMLLMClient.for_aspect(aspect_name, **overrides)
+        super().__init__(
+            self.prism_client.api_key or "",
+            self.prism_client.model or "",
+            self.prism_client.base_url or "",
+        )
+
+    def generate(
+        self,
+        messages: List[Dict[str, str]],
+        *,
+        max_tokens: int = 2000,
+        temperature: float = 0.7,
+        use_cache: bool = False,
+        cache_ttl: str = "1h",
+    ) -> str:
+        system_prompt = "You are a helpful assistant."
+        user_contents = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_prompt = msg.get("content", "")
+            elif msg.get("role") == "user":
+                user_contents.append(msg.get("content", ""))
+        user_prompt = "\n\n".join(user_contents)
+
+        return self.prism_client.generate_text(
+            system_prompt,
+            user_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    def generate_json(
+        self,
+        messages: List[Dict[str, str]],
+        *,
+        max_tokens: int = 2000,
+        temperature: float = 0.1,
+        use_cache: bool = False,
+        cache_ttl: str = "1h",
+    ) -> Optional[Dict[str, Any]]:
+        system_prompt = "You are a helpful assistant."
+        user_contents = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_prompt = msg.get("content", "")
+            elif msg.get("role") == "user":
+                user_contents.append(msg.get("content", ""))
+        user_prompt = "\n\n".join(user_contents)
+
+        raw = self.prism_client.generate_text(
+            system_prompt,
+            user_prompt,
+            response_format={"type": "json_object"},
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return self._parse_json_content(raw)
+
+
 def create_llm_client(
     model_name: Optional[str] = None,
     api_endpoint: Optional[str] = None,
@@ -1143,6 +1208,33 @@ def create_llm_client(
         A concrete LLM client instance.
     """
     logger = logging.getLogger(__name__)
+
+    try:
+        import sys
+        import os
+        root_dir = os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+        )
+        if root_dir not in sys.path:
+            sys.path.insert(0, root_dir)
+        from llm_client import PRISMLLMClient
+
+        overrides = {}
+        if model_name:
+            overrides["model"] = model_name
+        if api_key:
+            overrides["api_key"] = api_key
+        if api_endpoint:
+            overrides["base_url"] = api_endpoint
+        if provider:
+            overrides["provider"] = provider
+
+        logger.info("Initializing CentralizedPRISMLLMClient for novelty aspect")
+        return CentralizedPRISMLLMClient("novelty", overrides)
+    except Exception as e:
+        logger.warning(
+            f"Failed to initialize CentralizedPRISMLLMClient: {e}. Falling back to legacy clients."
+        )
 
     try:
         cfg = get_centralized_aspect_config("novelty")

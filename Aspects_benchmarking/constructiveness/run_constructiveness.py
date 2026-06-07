@@ -287,7 +287,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--provider",
         choices=["gemini", "devmate-gemini", "azure"],
-        default="gemini",
+        default=None,
         help="LLM provider (default: gemini).",
     )
     p.add_argument(
@@ -452,16 +452,20 @@ def _pct(done: int, total: int) -> str:
 
 
 def _build_evaluator(args: argparse.Namespace) -> ConstructivenessEvaluator:
-    if args.provider == "gemini":
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
-    elif args.provider == "devmate-gemini":
-        api_key = os.getenv("GEMINI_DEVMATE_API_KEY", "")
-    else:
-        api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+    provider = args.provider
+    model = args.model
+    api_key = None
+    if provider is not None:
+        if provider == "gemini":
+            api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+        elif provider == "devmate-gemini":
+            api_key = os.getenv("GEMINI_DEVMATE_API_KEY", "")
+        else:
+            api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
     return ConstructivenessEvaluator(
-        provider=args.provider,
+        provider=provider,
         api_key=api_key,
-        model=args.model,
+        model=model,
     )
 
 

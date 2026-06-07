@@ -299,7 +299,7 @@ def build_cps_arguments_by_reviewer(
     return dict(args_by_reviewer)
 
 class ReviewEvaluatorPipeline:
-    def __init__(self, api_key: str | None = None, client: Any | None = None):
+    def __init__(self, api_key: str | None = None, client: Any | None = None, provider: str | None = None, model: str | None = None):
         self.api_key = api_key
 
         # ── Token budgets ─────────────────────────────────────────────────────
@@ -325,8 +325,15 @@ class ReviewEvaluatorPipeline:
                 if _sys_path_root not in sys.path:
                     sys.path.insert(0, _sys_path_root)
                 from ai_config import get_llm_client
-                self.step1_client = get_llm_client("flaw_identification", step="step1")
-                self.step2_client = get_llm_client("flaw_identification", step="step2")
+                overrides = {}
+                if provider is not None:
+                    overrides["provider"] = provider
+                if model is not None:
+                    overrides["model"] = model
+                if api_key is not None:
+                    overrides["api_key"] = api_key
+                self.step1_client = get_llm_client("flaw_identification", step="step1", **overrides)
+                self.step2_client = get_llm_client("flaw_identification", step="step2", **overrides)
                 self.client = self.step1_client
                 self.step1_deployment = self.step1_client.model
                 self.step2_deployment = self.step2_client.model

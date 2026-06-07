@@ -107,7 +107,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--provider",
         choices=sorted(VALID_PROVIDERS),
-        default="gemini",
+        default=None,
         help="LLM provider  (default: gemini)",
     )
     parser.add_argument(
@@ -152,18 +152,8 @@ def parse_args() -> argparse.Namespace:
 # Pipeline construction
 # ---------------------------------------------------------------------------
 
-def _build_pipeline(provider: str, model: str | None) -> ReviewEvaluatorPipeline:
-    if provider == "azure":
-        api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
-        return ReviewEvaluatorPipeline(api_key=api_key)
-    from src.unified_client import UnifiedChatClient
-    # Set sensible defaults per provider
-    if model is None:
-        if provider == "gemini":
-            model = "gemini-2.5-flash-lite"
-        # openai default is resolved inside UnifiedChatClient
-    client = UnifiedChatClient(provider=provider, model=model)
-    return ReviewEvaluatorPipeline(client=client)
+def _build_pipeline(provider: str | None, model: str | None) -> ReviewEvaluatorPipeline:
+    return ReviewEvaluatorPipeline(provider=provider, model=model)
 
 
 # ---------------------------------------------------------------------------
