@@ -348,11 +348,6 @@ class ReviewEvaluatorPipeline:
 
         if not _centralized:
             provider_name = getattr(client, "provider", None)
-            if provider_name == "gemini-devmate":
-                if "AZURE_OPENAI_STEP1_MAX_OUTPUT_TOKENS" not in os.environ:
-                    self.step1_max_output_tokens = max(self.step1_max_output_tokens, 12000)
-                if "AZURE_OPENAI_STEP2_MAX_OUTPUT_TOKENS" not in os.environ:
-                    self.step2_max_output_tokens = max(self.step2_max_output_tokens, 8000)
             if client is not None:
                 self.client = client
                 self.step1_client = client

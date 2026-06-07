@@ -53,11 +53,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--provider",
-        choices=["devmate-gemini", "azure"],
-        default="devmate-gemini",
+        choices=["gemini", "azure"],
+        default="gemini",
         help=(
             "LLM provider for constructiveness scoring.\n"
-            "  devmate-gemini  — Devmate OpenAI-compatible Gemini endpoint (default)\n"
+            "  gemini          — Gemini endpoint (default)\n"
             "  azure           — Azure OpenAI"
         ),
     )
@@ -65,8 +65,7 @@ def parse_args() -> argparse.Namespace:
         "--model",
         default=None,
         help=(
-            "Override model/deployment name for the chosen provider.\n"
-            "For devmate-gemini, defaults to GEMINI_MODEL from .env."
+            "For gemini, defaults to GEMINI_MODEL or GOOGLE_MODEL from environment."
         ),
     )
     parser.add_argument(
@@ -254,8 +253,8 @@ def run_evaluate(args: argparse.Namespace) -> None:
         evaluator = ConstructivenessEvaluator(
             provider=args.provider,
             api_key=(
-                os.getenv("GEMINI_DEVMATE_API_KEY", "")
-                if args.provider == "devmate-gemini"
+                os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+                if args.provider == "gemini"
                 else os.getenv("AZURE_OPENAI_API_KEY", "")
             ),
             model=args.model,

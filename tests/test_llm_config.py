@@ -48,10 +48,6 @@ providers:
   mimo:
     api_key: ${MIMO_API_KEY}
     base_url: ${MIMO_BASE_URL:https://api.xiaomimimo.com/v1}
-  devmate:
-    api_key: ${DEVMATE_API_KEY}
-    base_url: ${DEVMATE_BASE_URL:https://devmate.example/api:v3}
-    disable_ssl_verify: ${DEVMATE_DISABLE_SSL_VERIFY:false}
   openrouter:
     api_key: ${LLM_API_KEY}
     base_url: https://openrouter.ai/api/v1
@@ -72,10 +68,6 @@ provider_defaults:
     default_model: mimo-v2.5-pro
     default_temperature: "0"
     default_max_tokens: "2048"
-  devmate:
-    default_model: gemini-3-flash-preview
-    default_temperature: "0"
-    default_max_tokens: "4096"
 aspects:
   constructiveness:
     enabled: true
@@ -121,12 +113,12 @@ reviewers:
 # ── Existing tests (adapted for enabled flags) ────────────────────────────
 
 def test_env_interpolation_preserves_url_defaults(monkeypatch, tmp_path):
-    monkeypatch.delenv("DEVMATE_BASE_URL", raising=False)
+    monkeypatch.delenv("MIMO_BASE_URL", raising=False)
     use_tmp_config(monkeypatch, tmp_path, BASE_CONFIG)
 
     cfg = llm_client.load_llm_config()
 
-    assert cfg["providers"]["devmate"]["base_url"] == "https://devmate.example/api:v3"
+    assert cfg["providers"]["mimo"]["base_url"] == "https://api.xiaomimimo.com/v1"
 
 
 def test_cache_reset_reloads_env(monkeypatch, tmp_path):
@@ -202,7 +194,6 @@ def test_ai_config_routes_aspects_from_yaml_and_legacy_provider_shape(monkeypatc
     }
     assert provider_cfg["default_model"] == "mimo-v2.5-pro"
     assert provider_cfg["default_max_tokens"] == 2048
-    assert ai_config.get_provider_config("gemini-devmate")["default_model"] == "gemini-3-flash-preview"
 
 
 def test_validate_env_is_yaml_driven_and_ignores_local_reviewers(monkeypatch, tmp_path):
@@ -211,7 +202,6 @@ def test_validate_env_is_yaml_driven_and_ignores_local_reviewers(monkeypatch, tm
     monkeypatch.setattr(ai_config, "MIMO_API_KEY", "")
     monkeypatch.setattr(ai_config, "GOOGLE_API_KEY", "gemini-key")
     monkeypatch.setattr(ai_config, "OPENAI_API_KEY", "")
-    monkeypatch.setattr(ai_config, "DEVMATE_API_KEY", "")
     monkeypatch.setattr(ai_config, "LLM_API_KEY", "")
     monkeypatch.setattr(ai_config, "AZURE_OPENAI_API_KEY", "")
 

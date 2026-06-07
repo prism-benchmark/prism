@@ -193,17 +193,6 @@ LLM_API_ENDPOINT: str = str(
     or ""
 )
 
-# Devmate
-_DEVMATE_CREDS = _provider_credentials("devmate")
-GEMINI_DEVMATE_MODEL: str = str(
-    _provider_defaults("devmate").get("default_model") or "gemini-3-flash-preview"
-)
-DEVMATE_API_KEY: str = str(_DEVMATE_CREDS.get("api_key") or "")
-DEVMATE_BASE_URL: str = str(_DEVMATE_CREDS.get("base_url") or "")
-DEVMATE_PROXY: str = str(_DEVMATE_CREDS.get("proxy") or "")
-DEVMATE_DISABLE_SSL_VERIFY: bool = _as_bool(
-    _DEVMATE_CREDS.get("disable_ssl_verify"), True
-)
 
 
 # ============================================================================
@@ -280,7 +269,7 @@ def get_provider_config(provider: str = "gemini") -> Dict[str, Any]:
     """Return a config dict for a provider (legacy interface).
 
     Args:
-        provider: one of 'gemini', 'openai', 'mimo', 'gemini-devmate',
+        provider: one of 'gemini', 'openai', 'mimo',
                   'azure', 'openrouter', 'llm'
 
     Returns:
@@ -298,14 +287,12 @@ def get_provider_config(provider: str = "gemini") -> Dict[str, Any]:
         }
 
     normalized = _provider_name(provider)
-    if normalized not in {"gemini", "openai", "mimo", "devmate", "azure", "openrouter"}:
+    if normalized not in {"gemini", "openai", "mimo", "azure", "openrouter"}:
         raise ValueError(
             f"Unknown provider '{provider}'. "
-            f"Supported: gemini, openai, mimo, gemini-devmate, devmate, azure, openrouter, llm"
+            f"Supported: gemini, openai, mimo, azure, openrouter, llm"
         )
     cfg = _legacy_provider_config(normalized)
-    if provider == "gemini-devmate" and not cfg.get("api_key"):
-        cfg["api_key"] = GOOGLE_API_KEY
     return cfg
 
 
@@ -322,7 +309,6 @@ def validate_env(
         "openai": ("OPENAI_API_KEY", OPENAI_API_KEY),
         "azure": ("AZURE_OPENAI_API_KEY", AZURE_OPENAI_API_KEY),
         "mimo": ("MIMO_API_KEY", MIMO_API_KEY),
-        "devmate": ("DEVMATE_API_KEY", DEVMATE_API_KEY),
         "openrouter": ("LLM_API_KEY", LLM_API_KEY),
     }
 

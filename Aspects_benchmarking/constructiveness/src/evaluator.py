@@ -47,7 +47,7 @@ UnifiedChatClient = _unified_mod.UnifiedChatClient
 
 
 # ---------------------------------------------------------------------------
-# Prompt — designed so Gemini/Devmate returns JSON even without json_mode
+# Prompt — designed so Gemini returns JSON even without json_mode
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """\
@@ -247,21 +247,13 @@ class ConstructivenessEvaluator:
                 print(f"[WARNING] Centralized config failed, falling back: {e}")
 
         # Legacy path: explicit provider
-        provider = provider or "devmate-gemini"
+        provider = provider or "gemini"
         self.provider = provider
         self.api_key = api_key
 
         if provider == "gemini":
             self.client = UnifiedChatClient(
                 provider="gemini",
-                model=model,
-                api_key=self.api_key,
-                max_output_tokens=self.base_max_output_tokens,
-            )
-            self.deployment = self.client.model
-        elif provider == "devmate-gemini":
-            self.client = UnifiedChatClient(
-                provider="gemini-devmate",
                 model=model,
                 api_key=self.api_key,
                 max_output_tokens=self.base_max_output_tokens,
@@ -286,7 +278,7 @@ class ConstructivenessEvaluator:
             self.deployment = self.client.model
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Use 'gemini', 'devmate-gemini', 'azure', or 'mimo'."
+                f"Unsupported provider: {provider}. Use 'gemini', 'azure', or 'mimo'."
             )
         
         print(f"[INFO] ConstructivenessEvaluator initialized (auto_adjust_tokens={self.auto_adjust_enabled})")

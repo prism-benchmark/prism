@@ -1,12 +1,11 @@
 """
 UnifiedChatClient – thin adapter so ReviewEvaluatorPipeline can use
-OpenAI (native), Google Gemini, or Devmate Gemini through the
+OpenAI (native), Google Gemini, or other OpenAI-compatible APIs through the
 exact same interface as AzureChatClient.generate_text().
 
 Usage:
     client = UnifiedChatClient(provider="openai", model="gpt-4o-mini")
     client = UnifiedChatClient(provider="gemini", model="models/gemini-2.5-flash-lite")
-    client = UnifiedChatClient(provider="gemini-devmate", model="gemini-3-flash-preview")
 """
 
 from __future__ import annotations
@@ -31,11 +30,6 @@ from ai_config import (  # noqa: E402
     MIMO_API_KEY,
     MIMO_MODEL,
     MIMO_BASE_URL,
-    DEVMATE_API_KEY,
-    DEVMATE_BASE_URL,
-    DEVMATE_PROXY,
-    DEVMATE_DISABLE_SSL_VERIFY,
-    GEMINI_DEVMATE_MODEL,
     DEFAULT_MAX_OUTPUT_TOKENS,
     get_provider_config,
 )
@@ -193,13 +187,6 @@ class UnifiedChatClient:
                 model or _get_env_value("GEMINI_MODEL") or f"models/{GEMINI_MODEL}"
             )
             self._init_gemini(api_key)
-        elif self.provider == "gemini-devmate":
-            self.model = (
-                model
-                or _get_env_value("GEMINI_DEVMATE_MODEL", "DEVMATE_MODEL")
-                or GEMINI_DEVMATE_MODEL
-            )
-            self._init_gemini_devmate(api_key)
         elif self.provider == "mimo":
             self.model = model or _get_env_value("MIMO_MODEL") or MIMO_MODEL
             self._init_mimo(api_key)
@@ -237,52 +224,7 @@ class UnifiedChatClient:
         except Exception as exc:
             raise RuntimeError(f"Failed to initialise OpenAI client: {exc}") from exc
 
-    def _build_devmate_client(self, proxy_url: Optional[str]):
-        try:
-            import httpx
-            from openai import OpenAI
 
-            http_kwargs: dict[str, Any] = {
-                "verify": self._devmate_ssl_verify,
-            }
-            if proxy_url:
-                http_kwargs["proxy"] = proxy_url
-            http_client = httpx.Client(**http_kwargs)
-            return OpenAI(
-                api_key=self._devmate_api_key,
-                base_url=self._devmate_base_url,
-                http_client=http_client,
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                f"Failed to initialise Devmate OpenAI-compatible client: {exc}"
-            ) from exc
-
-    def _init_gemini_devmate(self, api_key: Optional[str]) -> None:
-        self._devmate_api_key = (
-            api_key
-            or _get_env_value(
-                "GEMINI_DEVMATE_API_KEY", "DEVMATE_API_KEY", "GEMINI_API_KEY"
-            )
-            or DEVMATE_API_KEY
-            or GOOGLE_API_KEY
-        )
-        if not self._devmate_api_key:
-            raise RuntimeError(
-                "Missing Devmate API key. Set GEMINI_DEVMATE_API_KEY, DEVMATE_API_KEY, or GEMINI_API_KEY."
-            )
-
-        self._devmate_base_url = _get_env_value("DEVMATE_BASE_URL") or DEVMATE_BASE_URL
-        self._devmate_proxy = _get_env_value("DEVMATE_PROXY") or DEVMATE_PROXY
-        self._devmate_ssl_verify = not (
-            _env_flag("DEVMATE_DISABLE_SSL_VERIFY") or DEVMATE_DISABLE_SSL_VERIFY
-        )
-        self._devmate_proxy_fallback_used = False
-        self._openai_client = self._build_devmate_client(self._devmate_proxy)
-        print(
-            f"[INFO] UnifiedChatClient: Devmate Gemini ready (model={self.model}, proxy={'on' if self._devmate_proxy else 'off'})",
-            file=sys.stderr,
-        )
 
     def _init_mimo(self, api_key: Optional[str]) -> None:
         try:
@@ -354,15 +296,6 @@ class UnifiedChatClient:
             return self._call_gemini(
                 system_prompt, user_prompt, temp, tokens, json_mode
             )
-        elif self.provider == "gemini-devmate":
-            return self._call_openai(
-                system_prompt,
-                user_prompt,
-                temp,
-                tokens,
-                json_mode,
-                provider_label="Devmate",
-            )
         elif self.provider == "mimo":
             return self._call_openai(
                 system_prompt,
@@ -402,7 +335,7 @@ class UnifiedChatClient:
             ],
             "stream": False,
         }
-        if json_mode and self.provider != "gemini-devmate":
+        if json_mode:
             request_kwargs["response_format"] = {"type": "json_object"}
 
         # Reasoning models (o1/o3/gpt-5) ignore temperature and use
@@ -457,43 +390,6 @@ class UnifiedChatClient:
                         file=sys.stderr,
                     )
                     request_kwargs.pop("response_format", None)
-                    continue
-                if (
-                    self.provider == "gemini-devmate"
-                    and not self._devmate_proxy_fallback_used
-                    and self._devmate_proxy
-                    and any(
-                        token in err.lower()
-                        for token in (
-                            "proxy",
-                            "407",
-                            "tunnel",
-                            "connection refused",
-                            "getaddrinfo failed",
-                        )
-                    )
-                ):
-                    print(
-                        "  [INFO] Retrying Devmate call without proxy", file=sys.stderr
-                    )
-                    self._openai_client = self._build_devmate_client(None)
-                    self._devmate_proxy_fallback_used = True
-                    continue
-                if (
-                    self.provider == "gemini-devmate"
-                    and not self._devmate_proxy_fallback_used
-                    and self._devmate_proxy
-                    and any(
-                        token in err.lower()
-                        for token in ("connection timed out", "502", "timed out")
-                    )
-                ):
-                    print(
-                        "  [INFO] Devmate proxy timed out; retrying without proxy",
-                        file=sys.stderr,
-                    )
-                    self._openai_client = self._build_devmate_client(None)
-                    self._devmate_proxy_fallback_used = True
                     continue
                 print(
                     f"  [WARNING] {provider_label} call failed (attempt {attempt + 1}): {exc}",

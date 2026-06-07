@@ -26,7 +26,7 @@
 # To disable any component, set  enabled: false  on it.
 # To use env vars for sensitive values, use ${ENV_VAR_NAME} or ${VAR:default}.
 #
-# Provider names: openai, gemini, azure, mimo, openrouter, devmate
+# Provider names: openai, gemini, azure, mimo, openrouter
 # ═══════════════════════════════════════════════════════════════════════════
 
 # ── Run Profiles ─────────────────────────────────────────────────────────
@@ -103,11 +103,6 @@ providers:
     api_key: ${MIMO_API_KEY}
     base_url: ${MIMO_BASE_URL:https://api.xiaomimimo.com/v1}
 
-  devmate:
-    api_key: ${DEVMATE_API_KEY}
-    base_url: ${DEVMATE_BASE_URL:}
-    proxy: ${DEVMATE_PROXY:}
-    disable_ssl_verify: ${DEVMATE_DISABLE_SSL_VERIFY:true}
 
   openrouter:
     api_key: ${LLM_API_KEY}
@@ -148,10 +143,6 @@ provider_defaults:
     default_temperature: 0.0
     default_max_tokens: 4096
 
-  devmate:
-    default_model: gemini-3-flash-preview
-    default_temperature: 0.0
-    default_max_tokens: 4096
 
   openrouter:
     default_model: gpt-4o

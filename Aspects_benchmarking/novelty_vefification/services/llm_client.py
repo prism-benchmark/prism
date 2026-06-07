@@ -1242,8 +1242,6 @@ def create_llm_client(
         cfg = {}
 
     normalized_provider = (provider or cfg.get("provider") or LLM_PROVIDER or "openai").lower()
-    if normalized_provider == "gemini-devmate":
-        normalized_provider = "devmate"
     try:
         provider_cfg = get_centralized_provider_config(normalized_provider)
     except Exception:
@@ -1268,7 +1266,7 @@ def create_llm_client(
         return OpenRouterClient(key, model, endpoint)
 
     # Channel 2: Standard OpenAI or other OpenAI-compatible APIs
-    if normalized_provider in ('openai', 'gemini', 'mimo', 'devmate', 'default'):
+    if normalized_provider in ('openai', 'gemini', 'mimo', 'default'):
         # Only strip model prefix for actual OpenAI endpoints, not OpenAI-compatible ones
         if model and '/' in model and 'api.openai.com' in normalized_endpoint:
             try:

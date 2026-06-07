@@ -2,7 +2,7 @@
 llm_client.py — Unified LLM Client & Config.
 
 Single entry point for ALL LLM config and API calls. Supports:
-  - OpenAI, Gemini, Azure, Mimo, Devmate, OpenRouter
+  - OpenAI, Gemini, Azure, Mimo, OpenRouter
   - Per-aspect and per-reviewer config from llm_config.yaml
   - Run profiles (--profile quick, --profile aspects, etc.)
   - Enable/disable toggles on every component
@@ -185,8 +185,6 @@ def _coerce_numeric_fields(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 def _normalize_provider_name(provider_name: str) -> str:
     normalized = (provider_name or "").strip().lower()
-    if normalized == "gemini-devmate":
-        normalized = "devmate"
     return normalized
 
 
@@ -448,7 +446,7 @@ class PRISMLLMClient:
     # Hardcoded providers for direct API usage without llm_config.yaml.
     # Any provider name can also be used — it will be read from the YAML
     # providers section or treated as OpenAI-compatible with a custom base_url.
-    BUILTIN_PROVIDERS = {"openai", "gemini", "azure", "mimo", "devmate", "openrouter"}
+    BUILTIN_PROVIDERS = {"openai", "gemini", "azure", "mimo", "openrouter"}
 
     # ── Factory Methods ────────────────────────────────────────────────────
 
@@ -495,7 +493,7 @@ class PRISMLLMClient:
         api_version = cfg.get("api_version") or creds.get("api_version", "2024-10-21")
         deployment = cfg.get("deployment") or creds.get("deployment")
 
-        # Devmate-specific
+        # Proxy & SSL verification specific
         proxy = cfg.get("proxy") or creds.get("proxy", "")
         disable_ssl_verify = _coerce_bool(
             cfg.get("disable_ssl_verify", creds.get("disable_ssl_verify")), False
@@ -566,8 +564,6 @@ class PRISMLLMClient:
             self._init_azure()
         elif self.provider == "mimo":
             self._init_openai_compatible("Mimo")
-        elif self.provider == "devmate":
-            self._init_devmate()
         elif self.provider == "openrouter":
             self._init_openai_compatible("OpenRouter")
         else:
@@ -636,34 +632,6 @@ class PRISMLLMClient:
         except Exception as e:
             raise RuntimeError(f"Failed to init {name} client: {e}") from e
 
-    def _init_devmate(self):
-        try:
-            import httpx
-            from openai import OpenAI
-
-            if not self.api_key:
-                raise RuntimeError("Missing Devmate API key.")
-
-            http_kwargs: Dict[str, Any] = {
-                "verify": not self.disable_ssl_verify,
-                "timeout": self.timeout,
-            }
-            if self.proxy:
-                http_kwargs["proxy"] = self.proxy
-            http_client = httpx.Client(**http_kwargs)
-
-            self._client = OpenAI(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                http_client=http_client,
-                timeout=self.timeout,
-                max_retries=0,
-            )
-            logger.info(
-                f"[{self.label}] Devmate ready (model={self.model}, proxy={'on' if self.proxy else 'off'})"
-            )
-        except Exception as e:
-            raise RuntimeError(f"Failed to init Devmate client: {e}") from e
 
     # ── Core Interface ─────────────────────────────────────────────────────
 

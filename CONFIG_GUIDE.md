@@ -294,11 +294,6 @@ providers:
     base_url: ${MIMO_BASE_URL:https://api.xiaomimimo.com/v1}
     #                                 ↑ default if env var not set
 
-  devmate:
-    api_key: ${DEVMATE_API_KEY}
-    base_url: ${DEVMATE_BASE_URL:}
-    proxy: ${DEVMATE_PROXY:}
-    disable_ssl_verify: ${DEVMATE_DISABLE_SSL_VERIFY:true}
 ```
 
 ```bash
@@ -306,7 +301,6 @@ providers:
 OPENAI_API_KEY=sk-...
 MIMO_API_KEY=...
 GOOGLE_API_KEY=...
-DEVMATE_API_KEY=...
 LLM_API_KEY=...           # used by openrouter
 ```
 
@@ -318,7 +312,6 @@ LLM_API_KEY=...           # used by openrouter
 | `gemini`      | google-genai  | Native Gemini SDK                   |
 | `azure`       | openai        | Azure OpenAI (needs deployment)     |
 | `mimo`        | openai        | Xiaomi Mimo (OpenAI-compatible)     |
-| `devmate`     | openai        | Custom Devmate (with proxy/SSL)      |
 | `openrouter`  | openai        | OpenRouter (OpenAI-compatible)      |
 
 ### Adding any OpenAI-compatible provider
