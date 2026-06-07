@@ -43,7 +43,7 @@ from ai_config import (
 
 # ── Project paths ─────────────────────────────────────────────────────────
 PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_ROOT = os.path.join(PIPELINE_DIR, "output")
+OUTPUT_ROOT = os.environ.get("DOA_OUTPUT_ROOT") or os.path.join(PIPELINE_DIR, "output")
 OUTPUT_METRICS_DIR = os.path.join(OUTPUT_ROOT, "metrics")
 
 # Human review dirs per conference

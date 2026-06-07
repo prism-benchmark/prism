@@ -884,7 +884,7 @@ class PRISMLLMClient:
                     contents=user_prompt,
                     config=genai.types.GenerateContentConfig(**config_kwargs),
                 )
-                return (resp.text or "").strip()
+                return self._extract_gemini_text(resp)
             except Exception as exc:
                 logger.warning(
                     f"[{self.label}] Gemini call failed (attempt {attempt + 1}): {exc}"
@@ -893,6 +893,31 @@ class PRISMLLMClient:
                     raise
                 time.sleep(self.retry_delay)
         return ""
+
+    @staticmethod
+    def _extract_gemini_text(resp: Any) -> str:
+        """Extract visible (non-thought) text from a Gemini response.
+
+        Thinking models (e.g. gemma-4-26b-a4b-it) emit internal `thought=True`
+        parts that consume output tokens but must not leak into the answer.
+        `resp.text` is None when only thought parts exist, so we walk the
+        parts manually and concatenate only the visible ones.
+        """
+        text = getattr(resp, "text", None)
+        if text and not getattr(resp, "candidates", None):
+            return text.strip()
+        parts_text: list[str] = []
+        for cand in getattr(resp, "candidates", None) or []:
+            content = getattr(cand, "content", None)
+            if not content:
+                continue
+            for part in getattr(content, "parts", None) or []:
+                if getattr(part, "thought", False):
+                    continue
+                t = getattr(part, "text", None)
+                if t:
+                    parts_text.append(t)
+        return "\n".join(parts_text).strip()
 
     # ── Helpers ────────────────────────────────────────────────────────────
 

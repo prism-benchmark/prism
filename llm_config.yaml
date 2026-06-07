@@ -69,6 +69,19 @@ run_profiles:
     - treereview
     - deepreview
 
+  # Gemini test (Gemma 4 — small, fast, low rate limit)
+  gemini_gemma4_26b:
+    - constructiveness
+    - depth_of_analysis
+    - flaw_identification
+    - novelty
+
+  gemini_gemma4_31b:
+    - constructiveness
+    - depth_of_analysis
+    - flaw_identification
+    - novelty
+
 # ── Provider Credentials & Endpoints ──────────────────────────────────────
 providers:
   openai:
@@ -77,7 +90,8 @@ providers:
 
   gemini:
     api_key: ${GOOGLE_API_KEY}
-    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    # Both endpoints work: native genai SDK (no base_url) and OpenAI-compat
+    # base_url: https://generativelanguage.googleapis.com/v1beta/openai/
 
   azure:
     api_key: ${AZURE_OPENAI_API_KEY}
@@ -154,42 +168,42 @@ aspects:
   # ── Constructiveness evaluation (ARC scoring) ─────────────────────────
   constructiveness:
     enabled: true
-    provider: mimo
-    model: openai/gpt-oss-20b
+    provider: gemini
+    model: gemma-4-26b-a4b-it
     temperature: 0.0
-    max_tokens: 4000
+    max_tokens: 8000
 
   # ── Depth of Analysis (argument segmentation, grounding) ──────────────
   depth_of_analysis:
     enabled: true
-    provider: mimo
-    model: openai/gpt-oss-20b
+    provider: gemini
+    model: gemma-4-26b-a4b-it
     temperature: 0.0
-    max_tokens: 4000
+    max_tokens: 8000
 
   # ── Flaw Identification ──────────────────────────────────────────────
   flaw_identification:
     enabled: true
     # Step 1: Atomize & Group — output can be very large
     step1:
-      provider: mimo
-      model: openai/gpt-oss-20b
+      provider: gemini
+      model: gemma-4-26b-a4b-it
       temperature: 0.1
-      max_tokens: 4000
+      max_tokens: 8000
     # Step 2: Judge Flaws — compact output
     step2:
-      provider: mimo
-      model: openai/gpt-oss-20b
+      provider: gemini
+      model: gemma-4-26b-a4b-it
       temperature: 0.0
-      max_tokens: 4000
+      max_tokens: 8000
 
   # ── Novelty Verification ─────────────────────────────────────────────
   novelty:
     enabled: true
-    provider: mimo
-    model: openai/gpt-oss-20b
+    provider: gemini
+    model: gemma-4-26b-a4b-it
     temperature: 0.0
-    max_tokens: 4000
+    max_tokens: 8000
 
 # ═══════════════════════════════════════════════════════════════════════════
 # LLM Reviewers (LLM_reviewer subsystem)
