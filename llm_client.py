@@ -34,6 +34,8 @@ import logging
 import os
 import re
 import time
+import random
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -160,6 +162,8 @@ def _coerce_numeric_fields(cfg: Dict[str, Any]) -> Dict[str, Any]:
         "gpu_memory_utilization",
         "retry_delay",
         "timeout",
+        "rate_limit_rpm",
+        "rate_limit_tpm",
     ):
         if key in coerced:
             coerced[key] = _coerce_float(coerced[key])
@@ -424,6 +428,43 @@ def resolve_items(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# TokenBucket — Rate Limiter Helper
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TokenBucket:
+    def __init__(self, rate: float, capacity: float):
+        """
+        rate: tokens per second
+        capacity: max tokens in the bucket
+        """
+        self.rate = rate
+        self.capacity = capacity
+        self.tokens = capacity
+        self.last_update = time.monotonic()
+        self.lock = threading.Lock()
+
+    def consume(self, amount: float = 1.0) -> float:
+        """
+        Consume 'amount' tokens. If not enough tokens, returns the sleep duration required.
+        If tokens are available, consumes them and returns 0.0.
+        """
+        with self.lock:
+            now = time.monotonic()
+            elapsed = now - self.last_update
+            self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
+            self.last_update = now
+
+            if self.tokens >= amount:
+                self.tokens -= amount
+                return 0.0
+            else:
+                needed = amount - self.tokens
+                wait_time = needed / self.rate
+                self.tokens -= amount
+                return wait_time
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # PRISMLLMClient — Unified Client
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -499,6 +540,9 @@ class PRISMLLMClient:
             cfg.get("disable_ssl_verify", creds.get("disable_ssl_verify")), False
         )
 
+        rate_limit_rpm = cfg.get("rate_limit_rpm") or creds.get("rate_limit_rpm")
+        rate_limit_tpm = cfg.get("rate_limit_tpm") or creds.get("rate_limit_tpm")
+
         return cls(
             provider=provider,
             model=model,
@@ -514,6 +558,8 @@ class PRISMLLMClient:
             max_retries=max_retries,
             retry_delay=retry_delay,
             label=label,
+            rate_limit_rpm=rate_limit_rpm,
+            rate_limit_tpm=rate_limit_tpm,
         )
 
     # ── Constructor ────────────────────────────────────────────────────────
@@ -534,6 +580,8 @@ class PRISMLLMClient:
         max_retries: int = 3,
         retry_delay: float = 1.0,
         label: str = "",
+        rate_limit_rpm: Optional[float] = None,
+        rate_limit_tpm: Optional[float] = None,
     ):
         self.provider = _validate_provider_name(provider)
 
@@ -551,8 +599,42 @@ class PRISMLLMClient:
         self.retry_delay = _coerce_float(retry_delay, 1.0)
         self.label = label
 
+        # Check and apply environment variable overrides for rate limits
+        env_rpm = os.getenv("PRISM_RPM_LIMIT")
+        if env_rpm:
+            try:
+                rate_limit_rpm = float(env_rpm)
+            except ValueError:
+                pass
+        env_tpm = os.getenv("PRISM_TPM_LIMIT")
+        if env_tpm:
+            try:
+                rate_limit_tpm = float(env_tpm)
+            except ValueError:
+                pass
+
+        self.rate_limit_rpm = rate_limit_rpm
+        self.rate_limit_tpm = rate_limit_tpm
+
         self._client = None
         self._init_client()
+
+    # Class-level rate limiter registry to share limiters across clients
+    _LIMITERS: dict[str, tuple[Optional[TokenBucket], Optional[TokenBucket]]] = {}
+    _LIMITERS_LOCK = threading.Lock()
+
+    def _get_rate_limiters(self) -> tuple[Optional[TokenBucket], Optional[TokenBucket]]:
+        key = f"{self.provider}:{self.model}"
+        with self._LIMITERS_LOCK:
+            if key not in self._LIMITERS:
+                rpm_bucket = None
+                tpm_bucket = None
+                if self.rate_limit_rpm and self.rate_limit_rpm > 0:
+                    rpm_bucket = TokenBucket(rate=self.rate_limit_rpm / 60.0, capacity=self.rate_limit_rpm)
+                if self.rate_limit_tpm and self.rate_limit_tpm > 0:
+                    tpm_bucket = TokenBucket(rate=self.rate_limit_tpm / 60.0, capacity=self.rate_limit_tpm)
+                self._LIMITERS[key] = (rpm_bucket, tpm_bucket)
+            return self._LIMITERS[key]
 
     def _init_client(self):
         """Initialize the underlying SDK client."""
@@ -689,20 +771,61 @@ class PRISMLLMClient:
             self.max_retries,
         )
 
-        if self.provider == "gemini":
-            return self._call_gemini(
-                system_prompt, user_prompt, temp, tokens, mdl, json_mode
-            )
-        else:
-            return self._call_openai_compat(
-                system_prompt,
-                user_prompt,
-                temp,
-                tokens,
-                mdl,
-                json_mode,
-                temperature_override=temperature is not None,
-            )
+        rpm_bucket, tpm_bucket = self._get_rate_limiters()
+
+        # Enforce RPM
+        if rpm_bucket:
+            wait_time = rpm_bucket.consume(1.0)
+            if wait_time > 0:
+                logger.info(
+                    f"[{self.label}] Request rate limit reached. Sleeping {wait_time:.2f}s..."
+                )
+                time.sleep(wait_time)
+
+        # Reserve TPM (estimate prompt + completion)
+        prompt_tokens_est = len(system_prompt + user_prompt) // 4
+        reserved_tokens = prompt_tokens_est + tokens
+        if tpm_bucket:
+            wait_time = tpm_bucket.consume(reserved_tokens)
+            if wait_time > 0:
+                logger.info(
+                    f"[{self.label}] Token rate limit reached. Sleeping {wait_time:.2f}s..."
+                )
+                time.sleep(wait_time)
+
+        try:
+            if self.provider == "gemini":
+                response_text = self._call_gemini(
+                    system_prompt, user_prompt, temp, tokens, mdl, json_mode
+                )
+            else:
+                response_text = self._call_openai_compat(
+                    system_prompt,
+                    user_prompt,
+                    temp,
+                    tokens,
+                    mdl,
+                    json_mode,
+                    temperature_override=temperature is not None,
+                )
+
+            # Adjust TPM bucket based on actual tokens used
+            if tpm_bucket:
+                actual_completion_tokens = len(response_text) // 4
+                actual_total_tokens = prompt_tokens_est + actual_completion_tokens
+                unused_tokens = reserved_tokens - actual_total_tokens
+                if unused_tokens != 0:
+                    with tpm_bucket.lock:
+                        tpm_bucket.tokens = min(tpm_bucket.capacity, tpm_bucket.tokens + unused_tokens)
+
+            return response_text
+
+        except Exception:
+            # Refund all reserved tokens on failure
+            if tpm_bucket:
+                with tpm_bucket.lock:
+                    tpm_bucket.tokens = min(tpm_bucket.capacity, tpm_bucket.tokens + reserved_tokens)
+            raise
 
     def generate(
         self,
@@ -815,6 +938,18 @@ class PRISMLLMClient:
                 if json_mode and "response_format" in err.lower():
                     request_kwargs.pop("response_format", None)
                     continue
+
+                # Handle rate limit (429) errors with exponential backoff + jitter
+                if self._is_rate_limit_error(exc):
+                    if attempt == attempts - 1:
+                        raise
+                    backoff = (2 ** attempt) * self.retry_delay + random.uniform(0.5, 1.5)
+                    logger.warning(
+                        f"[{self.label}] Rate limit hit (attempt {attempt + 1}). Sleeping {backoff:.2f}s before retry..."
+                    )
+                    time.sleep(backoff)
+                    continue
+
                 logger.warning(
                     f"[{self.label}] API call failed (attempt {attempt + 1}): {exc}"
                 )
@@ -854,6 +989,17 @@ class PRISMLLMClient:
                 )
                 return self._extract_gemini_text(resp)
             except Exception as exc:
+                # Handle rate limit (429) errors with exponential backoff + jitter
+                if self._is_rate_limit_error(exc):
+                    if attempt == attempts - 1:
+                        raise
+                    backoff = (2 ** attempt) * self.retry_delay + random.uniform(0.5, 1.5)
+                    logger.warning(
+                        f"[{self.label}] Gemini rate limit hit (attempt {attempt + 1}). Sleeping {backoff:.2f}s before retry..."
+                    )
+                    time.sleep(backoff)
+                    continue
+
                 logger.warning(
                     f"[{self.label}] Gemini call failed (attempt {attempt + 1}): {exc}"
                 )
@@ -861,6 +1007,23 @@ class PRISMLLMClient:
                     raise
                 time.sleep(self.retry_delay)
         return ""
+
+    @staticmethod
+    def _is_rate_limit_error(exc: Exception) -> bool:
+        err = str(exc).lower()
+        status_code = getattr(exc, "status_code", None)
+        if status_code == 429:
+            return True
+        response = getattr(exc, "response", None)
+        if response is not None:
+            status_code = getattr(response, "status_code", None)
+            if status_code == 429:
+                return True
+        rate_limit_keywords = [
+            "429", "rate limit", "too many requests", "resource exhausted",
+            "resource_exhausted", "quota exceeded", "tpm", "rpm"
+        ]
+        return any(kw in err for kw in rate_limit_keywords)
 
     @staticmethod
     def _extract_gemini_text(resp: Any) -> str:

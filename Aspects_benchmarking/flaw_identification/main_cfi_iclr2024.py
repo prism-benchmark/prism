@@ -145,6 +145,12 @@ def parse_args() -> argparse.Namespace:
             "  cyclereview  – CycleReview JSON from cyclereview_iclr2024/"
         ),
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of parallel workers (default: 1, sequential).",
+    )
     return parser.parse_args()
 
 
@@ -442,6 +448,14 @@ def main() -> None:
     mode   = args.mode
     llm_type = args.llm_type
 
+    # Read environment variable override if set
+    env_workers = os.getenv("PRISM_MAX_WORKERS")
+    if env_workers:
+        try:
+            args.workers = int(env_workers)
+        except ValueError:
+            pass
+
     # Separate output dirs for each llm-type
     if args.output_dir:
         output_dir = args.output_dir
@@ -480,6 +494,12 @@ def main() -> None:
         return
     print("[INFO] Pipeline ready!\n")
 
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from tqdm import tqdm
+    write_lock = threading.Lock()
+    print_lock = threading.Lock()
+
     # -----------------------------------------------------------------------
     # Mode: cps_only
     # -----------------------------------------------------------------------
@@ -499,19 +519,30 @@ def main() -> None:
         done_ids = _load_processed_ids(out_path)
         print(f"[INFO] {len(done_ids)} already done — {len(cached_records) - len(done_ids)} remaining\n")
 
-        for record in cached_records:
+        todo_records = [r for r in cached_records if r["paper_id"] not in done_ids]
+
+        def process_one_cps(record):
             pid = record["paper_id"]
-            if pid in done_ids:
-                print(f"[SKIP] {pid}")
-                continue
             try:
                 result = process_cps_from_cache(record, pipeline, llm_type=llm_type)
                 if result:
-                    with open(out_path, "a", encoding="utf-8") as f:
-                        f.write(json.dumps(result, ensure_ascii=False) + "\n")
-                    done_ids.add(pid)
+                    with write_lock:
+                        with open(out_path, "a", encoding="utf-8") as f:
+                            f.write(json.dumps(result, ensure_ascii=False) + "\n")
+                    with print_lock:
+                        print(f"  [SAVED CPS] {pid}")
             except Exception as exc:
-                print(f"[ERROR] CPS {pid}: {exc}")
+                with print_lock:
+                    print(f"[ERROR] CPS {pid}: {exc}")
+
+        if args.workers > 1 and todo_records:
+            with ThreadPoolExecutor(max_workers=args.workers) as executor:
+                futures = {executor.submit(process_one_cps, rec): rec for rec in todo_records}
+                for future in tqdm(as_completed(futures), total=len(futures), desc="CPS Progress", unit="paper"):
+                    future.result()
+        else:
+            for record in todo_records:
+                process_one_cps(record)
 
         print(f"\n[OK] CPS done! Results → {out_path}")
         return
@@ -551,13 +582,8 @@ def main() -> None:
     total     = len(paper_pairs)
     print(f"[INFO] {len(done_ids)} already done — {len(remaining)} remaining\n")
 
-    for i, (paper_id, h_path, llm_path) in enumerate(remaining, start=1):
-        current_done = len(done_ids)
-        pct = (current_done / total * 100) if total else 0
-        print(f"=================================================================")
-        print(f"  [{i}/{len(remaining)}] Paper: {paper_id}  (total progress: {current_done + 1}/{total}, {pct:.1f}%)")
-        print(f"=================================================================")
-
+    def process_one_cfi(item):
+        paper_id, h_path, llm_path = item
         try:
             result = process_single_paper(
                 paper_id=paper_id,
@@ -568,12 +594,29 @@ def main() -> None:
                 llm_type=llm_type,
             )
             if result:
-                with open(out_path, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
-                done_ids.add(paper_id)
-                print(f"  [SAVED] {paper_id}")
+                with write_lock:
+                    with open(out_path, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(result, ensure_ascii=False) + "\n")
+                with print_lock:
+                    print(f"  [SAVED] {paper_id}")
         except Exception as exc:
-            print(f"[ERROR] Processing {paper_id}: {exc}")
+            with print_lock:
+                print(f"[ERROR] Processing {paper_id}: {exc}")
+
+    if args.workers > 1 and remaining:
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = {executor.submit(process_one_cfi, item): item for item in remaining}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Pipeline Progress", unit="paper"):
+                future.result()
+    else:
+        for i, item in enumerate(remaining, start=1):
+            paper_id, h_path, llm_path = item
+            pct = (len(done_ids) / total * 100) if total else 0
+            print(f"=================================================================")
+            print(f"  [{i}/{len(remaining)}] Paper: {paper_id}  (total progress: {len(done_ids) + 1}/{total}, {pct:.1f}%)")
+            print(f"=================================================================")
+            process_one_cfi(item)
+            done_ids.add(paper_id)
 
     print(f"\n[OK] Pipeline completed! Results → {out_path}")
     print(f"     Total processed : {len(done_ids)}/{total}")

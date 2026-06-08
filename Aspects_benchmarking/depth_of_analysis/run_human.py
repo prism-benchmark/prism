@@ -58,7 +58,7 @@ def save_result(paper_id: str, result: dict):
 #  Main Pipeline
 # ================================================================
 
-def run_human_pipeline():
+def run_human_pipeline(workers: int = 1):
     # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
     from src.evaluator import DepthOfAnalysisEvaluator
     evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
@@ -76,14 +76,17 @@ def run_human_pipeline():
     print(f"📄 Tổng papers: {total}  |  Đã xong: {already_done}  |  Còn lại: {total - already_done}")
     print("=" * 60)
 
-    for filename in tqdm(all_files, desc="👤 Human Phase", unit="paper"):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    print_lock = threading.Lock()
+
+    def process_file(filename: str):
         paper_id = filename.replace(".json", "")
-
-        # --- Checkpoint ---
         if is_processed(paper_id):
-            continue
+            return
 
-        print(f"\n📄 [{paper_id}]")
+        with print_lock:
+            print(f"\n📄 [{paper_id}]")
 
         # Đọc file Human JSON
         with open(os.path.join(config.HUMAN_DIR, filename), "r", encoding="utf-8") as f:
@@ -91,8 +94,9 @@ def run_human_pipeline():
 
         reviews_list = human_data.get("reviews", [])
         if not reviews_list:
-            print(f"  ⚠️  Không có reviews, bỏ qua.")
-            continue
+            with print_lock:
+                print(f"  ⚠️  Không có reviews, bỏ qua.")
+            return
 
         result = {
             "paper_id": paper_id,
@@ -105,10 +109,12 @@ def run_human_pipeline():
             reviewer_id  = f"Human_{idx}"
             review_text  = extract_human_review_text(review_dict)
             if not review_text:
-                print(f"  ⚠️  {reviewer_id}: text rỗng, bỏ qua.")
+                with print_lock:
+                    print(f"  ⚠️  {reviewer_id}: text rỗng, bỏ qua.")
                 continue
 
-            print(f"  → {reviewer_id}")
+            with print_lock:
+                print(f"  → {reviewer_id}")
 
             # Task 1 — Argument Segmentation
             arguments, u1 = evaluator.segment_arguments(review_text)
@@ -142,8 +148,26 @@ def run_human_pipeline():
 
         save_result(paper_id, result)
         reviewers = list(result["reviews_analysis"].keys())
-        print(f"  ✅ Đã lưu  [{', '.join(reviewers)}]  "
-              f"| tokens: {total_prompt + total_completion:,}")
+        with print_lock:
+            print(f"  ✅ Đã lưu  [{', '.join(reviewers)}]  "
+                  f"| tokens: {total_prompt + total_completion:,}")
+
+    if workers > 1:
+        todo_files = [f for f in all_files if not is_processed(f.replace(".json", ""))]
+        if todo_files:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {executor.submit(process_file, f): f for f in todo_files}
+                for future in tqdm(as_completed(futures), total=len(futures), desc="👤 Human Phase", unit="paper"):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        fname = futures[future]
+                        print(f"  ❌ Lỗi xử lý file {fname}: {e}")
+    else:
+        for filename in tqdm(all_files, desc="👤 Human Phase", unit="paper"):
+            if is_processed(filename.replace(".json", "")):
+                continue
+            process_file(filename)
 
     print(f"\n🎉 Human Phase hoàn tất! Kết quả tại: {config.OUTPUT_HUMAN_DIR}")
 
@@ -156,6 +180,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="DoA Pipeline — Phase 1: Process Human Reviews"
     )
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="Số lượng luồng xử lý song song (mặc định: 1, tuần tự)"
+    )
     args = parser.parse_args()
-    run_human_pipeline()
+    
+    # Read environment variable override if set
+    env_workers = os.getenv("PRISM_MAX_WORKERS")
+    workers = args.workers
+    if env_workers:
+        try:
+            workers = int(env_workers)
+        except ValueError:
+            pass
+
+    run_human_pipeline(workers=workers)
 

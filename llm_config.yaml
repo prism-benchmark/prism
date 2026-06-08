@@ -118,6 +118,8 @@ defaults:
   max_retries: ${MAX_RETRIES:3}
   retry_delay: ${RETRY_DELAY:1}
   timeout: ${API_TIMEOUT:120}
+  rate_limit_rpm: ${RATE_LIMIT_RPM:0}
+  rate_limit_tpm: ${RATE_LIMIT_TPM:0}
 
 # ── Provider-Level Defaults ──────────────────────────────────────────────
 # Fallback model/params when only a provider name is given (no explicit model).

@@ -291,7 +291,7 @@ def save_result(source_name: str, paper_id: str, result: dict):
 #  Main Pipeline
 # ================================================================
 
-def run_llm_pipeline(source_name: str):
+def run_llm_pipeline(source_name: str, workers: int = 1):
     # Kiểm tra source hợp lệ
     if source_name not in config.LLM_SOURCES:
         print(f"❌ Source '{source_name}' không tồn tại.")
@@ -341,23 +341,24 @@ def run_llm_pipeline(source_name: str):
     print(f"📄 Tổng papers: {total}  |  Đã xong: {already_done}  |  Còn lại: {total - already_done}")
     print("=" * 60)
 
-    for paper_id, review_text, fname in tqdm(
-        load_source_files(source_dir, fmt),
-        total=total,
-        desc=f"🤖 LLM [{source_name}]",
-        unit="paper"
-    ):
-        # --- Checkpoint ---
-        if is_processed(source_name, paper_id):
-            continue
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    print_lock = threading.Lock()
 
-        print(f"\n📄 [{paper_id}]  (file: {fname})")
+    def process_item(paper_id: str, review_text: str, fname: str):
+        if is_processed(source_name, paper_id):
+            return
+
+        with print_lock:
+            print(f"\n📄 [{paper_id}]  (file: {fname})")
 
         if not review_text:
-            print(f"  ⚠️  Text rỗng, bỏ qua.")
-            continue
+            with print_lock:
+                print(f"  ⚠️  Text rỗng, bỏ qua.")
+            return
 
-        print(f"  → {llm_key}")
+        with print_lock:
+            print(f"  → {llm_key}")
 
         # Task 1 — Argument Segmentation
         arguments, u1 = evaluator.segment_arguments(review_text)
@@ -397,7 +398,32 @@ def run_llm_pipeline(source_name: str):
         }
 
         save_result(source_name, paper_id, result)
-        print(f"  ✅ Đã lưu  | tokens: {total_prompt + total_completion:,}")
+        with print_lock:
+            print(f"  ✅ Đã lưu  | tokens: {total_prompt + total_completion:,}")
+
+    source_files = list(load_source_files(source_dir, fmt))
+
+    if workers > 1:
+        todo_items = [item for item in source_files if not is_processed(source_name, item[0])]
+        if todo_items:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {executor.submit(process_item, pid, rtxt, fn): pid for pid, rtxt, fn in todo_items}
+                for future in tqdm(as_completed(futures), total=len(futures), desc=f"🤖 LLM [{source_name}]", unit="paper"):
+                    try:
+                        future.result()
+                    except Exception as e:
+                        pid = futures[future]
+                        print(f"  ❌ Lỗi xử lý paper {pid}: {e}")
+    else:
+        for paper_id, review_text, fname in tqdm(
+            source_files,
+            total=total,
+            desc=f"🤖 LLM [{source_name}]",
+            unit="paper"
+        ):
+            if is_processed(source_name, paper_id):
+                continue
+            process_item(paper_id, review_text, fname)
 
     print(f"\n🎉 LLM [{source_name}] Phase hoàn tất! Kết quả tại: {config.get_llm_output_dir(source_name)}")
 
@@ -414,6 +440,20 @@ if __name__ == "__main__":
         "--source", type=str, required=True,
         help=f"Tên LLM source cần xử lý. Hiện có: {list(config.LLM_SOURCES.keys())}"
     )
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="Số lượng luồng xử lý song song (mặc định: 1, tuần tự)"
+    )
     args = parser.parse_args()
-    run_llm_pipeline(source_name=args.source)
+
+    # Read environment variable override if set
+    env_workers = os.getenv("PRISM_MAX_WORKERS")
+    workers = args.workers
+    if env_workers:
+        try:
+            workers = int(env_workers)
+        except ValueError:
+            pass
+
+    run_llm_pipeline(source_name=args.source, workers=workers)
 

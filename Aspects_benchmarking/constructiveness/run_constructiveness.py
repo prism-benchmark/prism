@@ -30,6 +30,11 @@ import os
 import sys
 import time
 from typing import Optional
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+append_lock = threading.Lock()
+print_lock = threading.Lock()
 
 # ── Resolve paths ─────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -441,8 +446,9 @@ def load_processed_ids(jsonl_path: str) -> set[str]:
 
 def append_record(jsonl_path: str, record: dict) -> None:
     os.makedirs(os.path.dirname(jsonl_path), exist_ok=True)
-    with open(jsonl_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    with append_lock:
+        with open(jsonl_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def _pct(done: int, total: int) -> str:
@@ -525,6 +531,7 @@ def run_human(
     pairs: list[tuple[str, str, str]],
     evaluator: ConstructivenessEvaluator,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     processed = load_processed_ids(HUMAN_OUTPUT)
     todo = [(pid, hp, sp) for pid, hp, sp in pairs if pid not in processed]
@@ -542,20 +549,40 @@ def run_human(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path, _) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path, _ = item
         try:
             record = process_human_paper(pid, h_path, evaluator, with_paper)
             append_record(HUMAN_OUTPUT, record)
-            success += 1
             n_rev = len(record["reviewers"])
             n_ok = sum(1 for r in record["reviewers"] if r["status"] == "success")
-            print(f"  → Saved {n_ok}/{n_rev} reviewers OK")
+            with print_lock:
+                print(f"  [{pid}] → Saved {n_ok}/{n_rev} reviewers OK")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="[HUMAN] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path, _ = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [HUMAN] Done — {success} success, {errors} errors")
@@ -598,6 +625,7 @@ def run_sea(
     pairs: list[tuple[str, str, str]],
     evaluator: ConstructivenessEvaluator,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     processed = load_processed_ids(SEA_OUTPUT)
     todo = [(pid, hp, sp) for pid, hp, sp in pairs if pid not in processed]
@@ -615,19 +643,39 @@ def run_sea(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path, s_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path, s_path = item
         try:
             record = process_sea_paper(pid, h_path, s_path, evaluator, with_paper)
             append_record(SEA_OUTPUT, record)
-            success += 1
             n_arcs = len(record.get("atomic_comments", []))
-            print(f"  → Saved (status={record['status']}, n_arcs={n_arcs})")
+            with print_lock:
+                print(f"  [{pid}] → Saved (status={record['status']}, n_arcs={n_arcs})")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="[SEA] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path, s_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [SEA]   Done — {success} success, {errors} errors")
@@ -671,6 +719,7 @@ def run_reviewer2(
     evaluator: ConstructivenessEvaluator,
     output_path: str,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     """Evaluate all reviewer2 reviews and save to output_path."""
     processed = load_processed_ids(output_path)
@@ -689,22 +738,42 @@ def run_reviewer2(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path, r2_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  "
-            f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path, r2_path = item
         try:
             record = process_reviewer2_paper(
                 pid, h_path, r2_path, evaluator, with_paper
             )
             append_record(output_path, record)
-            success += 1
             n_arcs = len(record.get("atomic_comments", []))
-            print(f"  → Saved (status={record['status']}, n_arcs={n_arcs})")
+            with print_lock:
+                print(f"  [{pid}] → Saved (status={record['status']}, n_arcs={n_arcs})")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="[REVIEWER2] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path, r2_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  "
+                f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [REVIEWER2] Done — {success} success, {errors} errors")
@@ -750,6 +819,7 @@ def run_deepreview(
     pairs: list[tuple[str, str, str]],
     evaluator: ConstructivenessEvaluator,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     """Evaluate all DeepReview reviews and save to DEEPREVIEW_OUTPUT."""
     processed = load_processed_ids(DEEPREVIEW_OUTPUT)
@@ -768,22 +838,42 @@ def run_deepreview(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path, dr_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  "
-            f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path, dr_path = item
         try:
             record = process_deepreview_paper(
                 pid, h_path, dr_path, evaluator, with_paper
             )
             append_record(DEEPREVIEW_OUTPUT, record)
-            success += 1
             n_arcs = len(record.get("atomic_comments", []))
-            print(f"  → Saved (status={record['status']}, n_arcs={n_arcs})")
+            with print_lock:
+                print(f"  [{pid}] → Saved (status={record['status']}, n_arcs={n_arcs})")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="[DEEPREVIEW] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path, dr_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  "
+                f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [DEEPREVIEW] Done — {success} success, {errors} errors")
@@ -840,6 +930,7 @@ def run_tree(
     output_path: str,
     conf: str = "iclr2024",
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     """Evaluate all Tree reviews and save to output_path."""
     processed = load_processed_ids(output_path)
@@ -860,22 +951,42 @@ def run_tree(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path, tree_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  "
-            f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path, tree_path = item
         try:
             record = process_tree_paper(
                 pid, h_path, tree_path, evaluator, conf, with_paper
             )
             append_record(output_path, record)
-            success += 1
             n_arcs = len(record.get("atomic_comments", []))
-            print(f"  → Saved (status={record['status']}, n_arcs={n_arcs})")
+            with print_lock:
+                print(f"  [{pid}] → Saved (status={record['status']}, n_arcs={n_arcs})")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc=f"[TREE-{conf.upper()}] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path, tree_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  "
+                f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [TREE-{conf.upper()}] Done — {success} success, {errors} errors")
@@ -966,6 +1077,7 @@ def run_icml_human(
     pairs: list[tuple[str, str]],
     evaluator: ConstructivenessEvaluator,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     """Evaluate all ICML2025 human reviews and save to ICML2025_HUMAN_OUTPUT."""
     processed = load_processed_ids(ICML2025_HUMAN_OUTPUT)
@@ -984,20 +1096,40 @@ def run_icml_human(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path = item
         try:
             record = process_icml_human_paper(pid, h_path, evaluator, with_paper)
             append_record(ICML2025_HUMAN_OUTPUT, record)
-            success += 1
             n_rev = len(record["reviewers"])
             n_ok = sum(1 for r in record["reviewers"] if r["status"] == "success")
-            print(f"  → Saved {n_ok}/{n_rev} reviewers OK")
+            with print_lock:
+                print(f"  [{pid}] → Saved {n_ok}/{n_rev} reviewers OK")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="[ICML2025-HUMAN] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [ICML2025-HUMAN] Done — {success} success, {errors} errors")
@@ -1061,6 +1193,7 @@ def run_neurips_human(
     pairs: list[tuple[str, str]],
     evaluator: ConstructivenessEvaluator,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     """Evaluate all NeurIPS 2025 human reviews and save to NEURIPS2025_HUMAN_OUTPUT."""
     processed = load_processed_ids(NEURIPS2025_HUMAN_OUTPUT)
@@ -1079,20 +1212,40 @@ def run_neurips_human(
         return
 
     success, errors = 0, 0
-    for i, (pid, h_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, h_path = item
         try:
             record = process_neurips_human_paper(pid, h_path, evaluator, with_paper)
             append_record(NEURIPS2025_HUMAN_OUTPUT, record)
-            success += 1
             n_rev = len(record["reviewers"])
             n_ok = sum(1 for r in record["reviewers"] if r["status"] == "success")
-            print(f"  → Saved {n_ok}/{n_rev} reviewers OK")
+            with print_lock:
+                print(f"  [{pid}] → Saved {n_ok}/{n_rev} reviewers OK")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="[NEURIPS2025-HUMAN] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, h_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  (total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [NEURIPS2025-HUMAN] Done — {success} success, {errors} errors")
@@ -1138,6 +1291,7 @@ def run_cyclereview(
     output_path: str,
     conf: str,
     with_paper: bool = False,
+    workers: int = 1,
 ) -> None:
     """Evaluate all CycleReview reviews for a conference and save to output_path."""
     processed = load_processed_ids(output_path)
@@ -1158,20 +1312,40 @@ def run_cyclereview(
         return
 
     success, errors = 0, 0
-    for i, (pid, cr_path) in enumerate(todo, 1):
-        print(
-            f"\n  [{i}/{todo_n}] Paper: {pid}  "
-            f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
-        )
+
+    def process_one(item):
+        pid, cr_path = item
         try:
             record = process_cyclereview_paper(pid, cr_path, evaluator, with_paper)
             append_record(output_path, record)
-            success += 1
             n_arcs = len(record.get("atomic_comments", []))
-            print(f"  → Saved (status={record['status']}, n_arcs={n_arcs})")
+            with print_lock:
+                print(f"  [{pid}] → Saved (status={record['status']}, n_arcs={n_arcs})")
+            return True
         except Exception as exc:
-            errors += 1
-            print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            with print_lock:
+                print(f"  [ERROR] {pid}: {type(exc).__name__}: {exc}")
+            return False
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, item): item for item in todo}
+            for future in tqdm(as_completed(futures), total=len(futures), desc=f"[CYCLEREVIEW-{conf.upper()}] Progress", unit="paper"):
+                if future.result():
+                    success += 1
+                else:
+                    errors += 1
+    else:
+        for i, item in enumerate(todo, 1):
+            pid, cr_path = item
+            print(
+                f"\n  [{i}/{todo_n}] Paper: {pid}  "
+                f"(total progress: {done_pre + i}/{total}, {_pct(done_pre + i, total)})"
+            )
+            if process_one(item):
+                success += 1
+            else:
+                errors += 1
 
     print(f"\n{'=' * 65}")
     print(f"  [CYCLEREVIEW-{conf.upper()}] Done — {success} success, {errors} errors")
@@ -1314,38 +1488,46 @@ def main() -> None:
         sys.exit(1)
     print("[INFO] Evaluator ready!\n")
 
+    # Read environment variable override if set
+    env_workers = os.getenv("PRISM_MAX_WORKERS")
+    if env_workers:
+        try:
+            args.workers = int(env_workers)
+        except ValueError:
+            pass
+
     # --- run requested modes ---
     t0 = time.time()
 
     if args.mode in ("human", "both"):
-        run_human(pairs, evaluator, args.with_paper)
+        run_human(pairs, evaluator, args.with_paper, args.workers)
 
     if args.mode in ("sea", "both"):
-        run_sea(pairs, evaluator, args.with_paper)
+        run_sea(pairs, evaluator, args.with_paper, args.workers)
 
     if args.mode == "reviewer2":
         conf = args.conf
         output_path = REVIEWER2_OUTPUTS[conf]
-        run_reviewer2(r2_pairs, evaluator, output_path, args.with_paper)
+        run_reviewer2(r2_pairs, evaluator, output_path, args.with_paper, args.workers)
 
     if args.mode == "deepreview":
-        run_deepreview(dr_pairs, evaluator, args.with_paper)
+        run_deepreview(dr_pairs, evaluator, args.with_paper, args.workers)
 
     if args.mode == "tree":
         conf = args.conf
         output_path = TREE_OUTPUTS[conf]
-        run_tree(tr_pairs, evaluator, output_path, conf, args.with_paper)
+        run_tree(tr_pairs, evaluator, output_path, conf, args.with_paper, args.workers)
 
     if args.mode == "icml_human":
-        run_icml_human(icml_pairs, evaluator, args.with_paper)
+        run_icml_human(icml_pairs, evaluator, args.with_paper, args.workers)
 
     if args.mode == "neurips_human":
-        run_neurips_human(neurips_pairs, evaluator, args.with_paper)
+        run_neurips_human(neurips_pairs, evaluator, args.with_paper, args.workers)
 
     if args.mode == "cyclereview":
         conf = args.conf
         output_path = CYCLEREVIEW_OUTPUTS[conf]
-        run_cyclereview(cr_pairs, evaluator, output_path, conf, args.with_paper)
+        run_cyclereview(cr_pairs, evaluator, output_path, conf, args.with_paper, args.workers)
 
     elapsed = time.time() - t0
     print(f"\n[INFO] Total time elapsed: {elapsed / 60:.1f} min")

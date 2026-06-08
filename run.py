@@ -674,6 +674,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Process at most N papers per pipeline (for quick tests)",
     )
     p.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of concurrent workers for parallel paper execution and dispatching (default: 1)",
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would run without executing",
@@ -712,11 +718,29 @@ def main(argv: Optional[List[str]] = None) -> int:
     aspects = resolve_aspects(args)
     conferences = resolve_conferences(args)
     reviewers = resolve_reviewers(args)
+    # Resolve worker count
+    workers = args.workers
+    if workers is None:
+        env_workers = os.getenv("PRISM_MAX_WORKERS")
+        if env_workers:
+            try:
+                workers = int(env_workers)
+            except ValueError:
+                workers = 1
+        else:
+            workers = 1
+
     extra_args = (
         args.forward_args[1:]
         if args.forward_args and args.forward_args[0] == "--"
         else []
     )
+
+    if workers > 1:
+        if "--workers" not in extra_args and not any(arg.startswith("--workers=") for arg in extra_args):
+            extra_args.extend(["--workers", str(workers)])
+        if "--max-workers" not in extra_args and not any(arg.startswith("--max-workers=") for arg in extra_args):
+            extra_args.extend(["--max-workers", str(workers)])
 
     # Distinguish aspect pipelines from reviewer generation pipelines
     aspect_names = [a for a in aspects if a in ASPECT_DISPATCH]
@@ -736,6 +760,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"  Reviewers   : {', '.join(reviewers) if reviewers else '(none)'}")
     if args.limit:
         print(f"  Limit       : {args.limit} papers")
+    if workers > 1:
+        print(f"  Workers     : {workers}")
     print()
 
     if args.dry_run:

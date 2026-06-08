@@ -418,3 +418,113 @@ reviewers: {}
 
     assert llm_client.resolve_items("aspects") == []
     assert llm_client.list_enabled("aspects") == []
+
+
+def test_token_bucket():
+    bucket = llm_client.TokenBucket(rate=10, capacity=100)
+    assert bucket.tokens == 100
+
+    # Consume within capacity
+    wait_time = bucket.consume(30)
+    assert wait_time == 0.0
+    assert bucket.tokens == 70
+
+    # Consume more than capacity
+    wait_time = bucket.consume(80)
+    assert wait_time > 0.0
+    # tokens becomes negative (since we consumed more than available, rate-limiting wait time is returned)
+    assert abs(wait_time - 1.0) < 1e-5
+
+
+def test_is_rate_limit_error():
+    class DummyException(Exception):
+        pass
+
+    exc1 = DummyException("rate limit exceeded")
+    assert llm_client.PRISMLLMClient._is_rate_limit_error(exc1) is True
+
+    exc2 = DummyException("Resource Exhausted")
+    assert llm_client.PRISMLLMClient._is_rate_limit_error(exc2) is True
+
+    exc3 = DummyException("Something went wrong")
+    assert llm_client.PRISMLLMClient._is_rate_limit_error(exc3) is False
+
+    # Status code 429
+    exc4 = DummyException()
+    exc4.status_code = 429
+    assert llm_client.PRISMLLMClient._is_rate_limit_error(exc4) is True
+
+
+def test_prism_llm_client_rate_limiter_and_refund(monkeypatch):
+    rpm_bucket = llm_client.TokenBucket(rate=0, capacity=60)
+    tpm_bucket = llm_client.TokenBucket(rate=0, capacity=1000)
+
+    client = llm_client.PRISMLLMClient(provider="openai", model="gpt-4o-mini", api_key="mock-api-key", rate_limit_rpm=60, rate_limit_tpm=1000)
+    monkeypatch.setattr(client, "_get_rate_limiters", lambda: (rpm_bucket, tpm_bucket))
+
+    # Mock the actual LLM call method to succeed
+    monkeypatch.setattr(client, "_call_openai_compat", lambda sys, usr, temp, max_tok, model, json_mode, **kwargs: "hello")
+
+    client.max_tokens = 10
+
+    res = client.generate_text("system", "hello")
+    assert res == "hello"
+    # TPM tokens initially: 1000.
+    # Reserved: prompt (len("system" + "hello")//4 = 11//4 = 2) + max_tokens (10) = 12.
+    # Actual: prompt (2) + len("hello")//4 (5//4 = 1) = 3.
+    # Refund: 12 - 3 = 9.
+    # Expected remaining tokens: 1000 - 12 + 9 = 997.
+    assert tpm_bucket.tokens == 997
+
+    # Mock the actual LLM call to fail, checking that ALL reserved tokens are refunded
+    def failing_call(*args, **kwargs):
+        raise ValueError("failing")
+
+    monkeypatch.setattr(client, "_call_openai_compat", failing_call)
+    with pytest.raises(ValueError):
+        client.generate_text("system", "hello")
+    # TPM tokens before call: 997. Should still be 997 after failure due to full refund.
+    assert tpm_bucket.tokens == 997
+
+
+def test_prism_llm_client_exponential_backoff(monkeypatch):
+    import time
+    client = llm_client.PRISMLLMClient(provider="openai", model="gpt-4o-mini", api_key="mock-api-key", max_retries=2, retry_delay=1.0)
+
+    # Mock TokenBucket to return 0 wait times
+    monkeypatch.setattr(client, "_get_rate_limiters", lambda: (None, None))
+
+    # Dummy class for rate limit exception
+    class MockRateLimitError(Exception):
+        pass
+
+    sleep_calls = []
+    monkeypatch.setattr(time, "sleep", lambda t: sleep_calls.append(t))
+
+    # Mock actual API call to fail with rate limit error
+    call_count = 0
+    def mock_create(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        raise MockRateLimitError("429 Rate Limit Exceeded")
+
+    monkeypatch.setattr(client._client.chat.completions, "create", mock_create)
+
+    # Verify rate limit check helper returns True
+    monkeypatch.setattr(client, "_is_rate_limit_error", lambda exc: isinstance(exc, MockRateLimitError))
+
+    with pytest.raises(MockRateLimitError):
+        client.generate_text("system", "hello")
+
+    # max_retries = 2, so attempts = 3.
+    # It should call mock_call 3 times, and sleep twice (after 1st and 2nd attempts).
+    assert call_count == 3
+    assert len(sleep_calls) == 2
+    # backoff formula: (2 ** attempt) * self.retry_delay + random.uniform(0.5, 1.5)
+    # retry_delay = 1.0.
+    # attempt 0: (2 ** 0) * 1.0 + jitter -> 1.0 + jitter
+    # attempt 1: (2 ** 1) * 1.0 + jitter -> 2.0 + jitter
+    assert 1.5 <= sleep_calls[0] <= 2.5
+    assert 2.5 <= sleep_calls[1] <= 3.5
+
+
