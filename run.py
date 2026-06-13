@@ -130,12 +130,20 @@ def _read_paper_ids(conference: str) -> List[str]:
         if env_conf == "NEURIPS2025":
             env_conf = "NeurIPS2025"
         base = conf_path(env_conf)
-        conf_lower = conference.lower().replace("neurips2025", "neurlps2025")
+        conf_lower = conference.lower()
         ids_file = os.path.join(base, f"paper_ids_200_{conf_lower}.txt")
-        if not os.path.exists(ids_file):
+        if os.path.exists(ids_file):
+            with open(ids_file) as f:
+                return [line.strip() for line in f if line.strip()]
+
+        papers_dir = os.path.join(base, "papers")
+        if not os.path.isdir(papers_dir):
             return []
-        with open(ids_file) as f:
-            return [line.strip() for line in f if line.strip()]
+        return sorted(
+            name.removesuffix(".grobid.txt").removesuffix(".txt")
+            for name in os.listdir(papers_dir)
+            if name.endswith((".txt", ".grobid.txt"))
+        )
     except Exception:
         return []
 
@@ -156,7 +164,7 @@ LLM_TYPE_TO_DOA_FORMAT = {
 def run_depth_of_analysis(
     conferences: List[str],
     reviewers: List[str],
-    limit: Optional[int] = None,
+    workers: int = 1,
     extra_args: Optional[List[str]] = None,
 ) -> int:
     """Run DoA evaluation for specified conferences and reviewer types."""
@@ -178,6 +186,8 @@ def run_depth_of_analysis(
                 str(script),
                 "--conference",
                 conf_env,
+                "--workers",
+                str(workers),
                 *(extra_args or []),
                 cwd=str(cwd),
             )
@@ -185,10 +195,8 @@ def run_depth_of_analysis(
                 exit_code = code
 
         # 2. Evaluate each LLM reviewer type
-        for rev in reviewers:
+        for rev in (reviewer for reviewer in reviewers if reviewer != "human"):
             source_name = f"{rev}_{conf_env.lower()}"
-            if conf_env.lower() == "neurips2025":
-                source_name = source_name.replace("neurips2025", "neurlps2025")
 
             print(f"\n{'=' * 60}")
             print(f"  Depth of Analysis — {rev} — {conf_env}")
@@ -199,6 +207,8 @@ def run_depth_of_analysis(
                     str(script),
                     "--source",
                     source_name,
+                    "--workers",
+                    str(workers),
                     *(extra_args or []),
                     cwd=str(cwd),
                 )
@@ -240,6 +250,7 @@ def run_constructiveness(
     conferences: List[str],
     reviewers: List[str],
     limit: Optional[int] = None,
+    workers: int = 1,
     extra_args: Optional[List[str]] = None,
 ) -> int:
     """Run Constructiveness evaluation for specified conferences and reviewers."""
@@ -259,6 +270,7 @@ def run_constructiveness(
             print(f"{'=' * 60}")
 
             cmd = [str(script), "--mode", mode, "--conf", conf]
+            cmd += ["--workers", str(workers)]
             if limit:
                 cmd += ["--limit", str(limit)]
             if extra_args:
@@ -280,6 +292,7 @@ def run_flaw_identification(
     conferences: List[str],
     reviewers: List[str],
     limit: Optional[int] = None,
+    workers: int = 1,
     extra_args: Optional[List[str]] = None,
 ) -> int:
     """Run Flaw ID evaluation for specified conferences and reviewers."""
@@ -288,21 +301,19 @@ def run_flaw_identification(
 
     for conf in conferences:
         # Map conference name to the main_cfi script
-        conf_lower = conf.lower().replace("neurips2025", "neurlps2025")
+        conf_lower = conf.lower()
         script = cwd / f"main_cfi_{conf_lower}.py"
-        if not script.exists():
-            # Try without the neurIPS mapping
-            script = cwd / f"main_cfi_{conf.lower()}.py"
         if not script.exists():
             print(f"  [WARN] No flaw ID script for {conf}: {script}")
             continue
 
-        for rev in reviewers:
+        for rev in (reviewer for reviewer in reviewers if reviewer != "human"):
             print(f"\n{'=' * 60}")
             print(f"  Flaw ID — {rev} — {conf}")
             print(f"{'=' * 60}")
 
             cmd = [str(script), "--mode", "all", "--llm-type", rev]
+            cmd += ["--workers", str(workers)]
             if limit:
                 cmd += [f"--limit={limit}"]
             if extra_args:
@@ -333,6 +344,7 @@ def run_novelty(
     conferences: List[str],
     reviewers: List[str],
     limit: Optional[int] = None,
+    workers: int = 1,
     extra_args: Optional[List[str]] = None,
 ) -> int:
     """Run Novelty Assessment for specified conferences and reviewers.
@@ -380,7 +392,13 @@ def run_novelty(
                 novelty_conf,
                 "--review-types",
                 review_type,
+                "--max-workers",
+                str(workers),
+                "--task2-workers",
+                str(workers),
             ]
+            if limit:
+                cmd += ["--max-papers", str(limit)]
             if extra_args:
                 cmd += extra_args
 
@@ -677,7 +695,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--workers",
         type=int,
         default=None,
-        help="Number of concurrent workers for parallel paper execution and dispatching (default: 1)",
+        help="Concurrent papers per evaluation (default: PRISM_MAX_WORKERS or 8)",
     )
     p.add_argument(
         "--dry-run",
@@ -699,7 +717,7 @@ def _setup_data() -> int:
         print(f"[ERROR] Data setup script not found: {data_script}")
         return 1
     print("\n[SETUP] Downloading PRISM benchmark dataset...\n")
-    return _python(str(data_script), "--write-env", cwd=str(_REPO_ROOT))
+    return _python(str(data_script), cwd=str(_REPO_ROOT))
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -726,21 +744,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             try:
                 workers = int(env_workers)
             except ValueError:
-                workers = 1
+                workers = 8
         else:
-            workers = 1
+            workers = 8
+    if workers < 1:
+        print("[ERROR] --workers must be at least 1")
+        return 2
 
     extra_args = (
         args.forward_args[1:]
         if args.forward_args and args.forward_args[0] == "--"
         else []
     )
-
-    if workers > 1:
-        if "--workers" not in extra_args and not any(arg.startswith("--workers=") for arg in extra_args):
-            extra_args.extend(["--workers", str(workers)])
-        if "--max-workers" not in extra_args and not any(arg.startswith("--max-workers=") for arg in extra_args):
-            extra_args.extend(["--max-workers", str(workers)])
 
     # Distinguish aspect pipelines from reviewer generation pipelines
     aspect_names = [a for a in aspects if a in ASPECT_DISPATCH]
@@ -783,12 +798,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             "novelty": run_novelty,
         }[aspect]
 
-        code = dispatch_fn(
-            conferences=conferences,
-            reviewers=reviewers,
-            limit=args.limit,
-            extra_args=extra_args,
-        )
+        dispatch_kwargs = {
+            "conferences": conferences,
+            "reviewers": reviewers,
+            "workers": workers,
+            "extra_args": extra_args,
+        }
+        if aspect != "depth_of_analysis":
+            dispatch_kwargs["limit"] = args.limit
+        code = dispatch_fn(**dispatch_kwargs)
         if code != 0:
             exit_code = code
             print(f"  [WARN] {aspect} exited with code {code}")

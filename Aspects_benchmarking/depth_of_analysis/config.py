@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from env_loader import (
     DATA_ROOT,
     conf_path,
+    reviewer_dir,
     paper_ids_file,
     GOOGLE_API_KEY,
     GEMINI_MODEL,
@@ -61,16 +62,17 @@ HUMAN_DIR = HUMAN_DIRS["ICLR2026"]
 
 # ── LLM Sources ───────────────────────────────────────────────────────────
 def _p(conference: str, subfolder: str) -> str:
-    return os.path.join(conf_path(conference), subfolder)
+    reviewer = subfolder.split("_", 1)[0]
+    return reviewer_dir(conference, reviewer)
 
 
 LLM_SOURCES = {
     # ── SEA ──────────────────────────────────────────────────────────────
-    "sea_iclr2024": {"dir": _p("ICLR2024", "sea_iclr2024"), "format": "txt"},
-    "sea_iclr2025": {"dir": _p("ICLR2025", "sea_iclr2025"), "format": "txt"},
-    "sea_iclr2026": {"dir": _p("ICLR2026", "sea_iclr2026"), "format": "txt"},
-    "sea_icml2025": {"dir": _p("ICML2025", "sea_icml2025"), "format": "txt"},
-    "sea_neurlps2025": {"dir": _p("NeurIPS2025", "sea_neurlps2025"), "format": "txt"},
+    "sea_iclr2024": {"dir": reviewer_dir("ICLR2024", "sea"), "format": "txt"},
+    "sea_iclr2025": {"dir": reviewer_dir("ICLR2025", "sea"), "format": "txt"},
+    "sea_iclr2026": {"dir": reviewer_dir("ICLR2026", "sea"), "format": "txt"},
+    "sea_icml2025": {"dir": reviewer_dir("ICML2025", "sea"), "format": "txt"},
+    "sea_neurips2025": {"dir": reviewer_dir("NeurIPS2025", "sea"), "format": "txt"},
     # ── TreeReview ───────────────────────────────────────────────────────
     "tree_iclr2024": {"dir": _p("ICLR2024", "tree_iclr2024"), "format": "tree_json"},
     "tree_iclr2025": {"dir": _p("ICLR2025", "tree_iclr2025"), "format": "tree_json"},
@@ -151,12 +153,11 @@ LLM_SOURCES = {
         "dir": _p("ICML2025", "cyclereview_icml2025"),
         "format": "cyclereview_json",
     },
-    "cyclereview_neurlps2025": {
-        "dir": _p("NeurIPS2025", "cyclereview_neurlps2025"),
+    "cyclereview_neurips2025": {
+        "dir": _p("NeurIPS2025", "cyclereview_neurips2025"),
         "format": "cyclereview_json",
     },
 }
-
 
 # ── Output helpers ────────────────────────────────────────────────────────
 def get_llm_output_dir(source_name: str) -> str:

@@ -33,7 +33,7 @@ import pipeline.config as config
 from config import HUMAN_DIRS as _HUMAN_DIRS
 NEURIPS2025_HUMAN_DIR = _HUMAN_DIRS['NeurIPS2025']
 import os as _os
-NEURIPS2025_PAPER_IDS_FILE = _os.path.join(NEURIPS2025_HUMAN_DIR, '..', 'paper_ids_200_neurlps2025.txt')
+NEURIPS2025_PAPER_IDS_FILE = _os.path.join(NEURIPS2025_HUMAN_DIR, '..', 'paper_ids_200_neurips2025.txt')
 
 PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR   = os.path.join(PIPELINE_DIR, "output", "human_neurips2025")

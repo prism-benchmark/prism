@@ -37,7 +37,7 @@ except ImportError:
 # Style constants
 # ---------------------------------------------------------------------------
 
-CONFERENCES = ["ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "Neurlps2025"]
+CONFERENCES = ["ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025"]
 CONF_LABELS = ["ICLR'24", "ICLR'25", "ICLR'26", "ICML'25", "NeurIPS'25"]
 MODELS = ["human", "sea", "deepreview", "reviewer2", "cyclereview", "tree"]
 MODEL_LABELS = ["Human", "SEA", "DeepReview", "Reviewer2", "CycleReview", "Tree"]

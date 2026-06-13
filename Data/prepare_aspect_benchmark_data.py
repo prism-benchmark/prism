@@ -8,7 +8,7 @@ The aspect benchmarking scripts all read one DATA_ROOT with this shape:
       ICLR2025/
       ICLR2026/
       ICML2025/
-      Neurlps2025/
+      NeurIPS2025/
 
 This utility accepts either an extracted dataset directory or a zip archive,
 copies/extracts it into that layout, creates the 50-paper id files expected by
@@ -35,11 +35,11 @@ CONFERENCES = {
         "subdirs": [
             "human_reviews",
             "papers",
-            "sea_iclr2024",
-            "tree_iclr2024",
-            "reviewer2_iclr2024",
-            "deepreview_iclr2024",
-            "cyclereview_iclr2024",
+            "sea",
+            "tree",
+            "reviewer2",
+            "deepreview",
+            "cyclereview",
         ],
     },
     "ICLR2025": {
@@ -48,11 +48,11 @@ CONFERENCES = {
         "subdirs": [
             "human_reviews",
             "papers",
-            "sea_iclr2025",
-            "tree_iclr2025",
-            "reviewer2_iclr2025",
-            "deepreview_iclr2025",
-            "cyclereview_iclr2025",
+            "sea",
+            "tree",
+            "reviewer2",
+            "deepreview",
+            "cyclereview",
         ],
     },
     "ICLR2026": {
@@ -61,11 +61,11 @@ CONFERENCES = {
         "subdirs": [
             "human_reviews",
             "papers",
-            "sea_iclr2026",
-            "tree_iclr2026",
-            "reviewer2_iclr2026",
-            "deepreview_iclr2026",
-            "cyclereview_iclr2026",
+            "sea",
+            "tree",
+            "reviewer2",
+            "deepreview",
+            "cyclereview",
         ],
     },
     "ICML2025": {
@@ -74,25 +74,24 @@ CONFERENCES = {
         "subdirs": [
             "human_reviews",
             "papers",
-            "sea_icml2025",
-            "tree_icml2025",
-            "reviewer2_icml2025",
-            "deepreview_icml2025",
-            "cyclereview_icml2025",
+            "sea",
+            "tree",
+            "reviewer2",
+            "deepreview",
+            "cyclereview",
         ],
     },
-    # Keep the original dataset spelling. env_loader maps NeurIPS2025 to this.
-    "Neurlps2025": {
-        "id_200": "paper_ids_200_neurlps2025.txt",
-        "id_50": ["paper_ids_50_neurips2025.txt", "paper_ids_50_neurlps2025.txt"],
+    "NeurIPS2025": {
+        "id_200": "paper_ids_200_neurips2025.txt",
+        "id_50": ["paper_ids_50_neurips2025.txt"],
         "subdirs": [
             "human_reviews",
             "papers",
-            "sea_neurlps2025",
-            "tree_neurips2025",
-            "reviewer2_neurips2025",
-            "deepreview_neurips2025",
-            "cyclereview_neurlps2025",
+            "sea",
+            "tree",
+            "reviewer2",
+            "deepreview",
+            "cyclereview",
         ],
     },
 }

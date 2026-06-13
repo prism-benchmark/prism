@@ -52,7 +52,7 @@ for _p in [
     if os.path.exists(_p):
         load_dotenv(_p, override=False)
 
-from paths_config import conf_path as _conf_path
+from paths_config import conf_path as _conf_path, reviewer_dir as _reviewer_dir
 
 from src.evaluator import ConstructivenessEvaluator
 from src.metrics import compute_review_metrics
@@ -78,19 +78,19 @@ from src.utils import (
 # ── Path constants ─────────────────────────────────────────────────────────────
 _DATA = os.path.normpath(os.path.join(_HERE, "..", "data"))
 # _SEA_ROOT    = os.path.join(_DATA, "iclr2024", "sea")
-_SEA_ROOT = _conf_path("NeurIPS2025")
-HUMAN_FOLDER = os.path.join(_SEA_ROOT, "human_reviews")
-SEA_FOLDER = os.path.join(_SEA_ROOT, "sea_neurlps2025")
-REVIEWER2_FOLDER = os.path.join(_conf_path("ICLR2025"), "reviewer2_iclr2025")
-DEEPREVIEW_FOLDER = os.path.join(_conf_path("NeurIPS2025"), "deepreview_neurips2025")
+_SEA_ROOT = _conf_path("ICLR2024")
+HUMAN_FOLDER = _reviewer_dir("ICLR2024", "human")
+SEA_FOLDER = _reviewer_dir("ICLR2024", "sea")
+REVIEWER2_FOLDER = _reviewer_dir("ICLR2024", "reviewer2")
+DEEPREVIEW_FOLDER = _reviewer_dir("ICLR2024", "deepreview")
 # TREE_FOLDER       = os.path.join(_DATA, "tree_iclr2024_full")    # _review.json files
-TREE_FOLDER = os.path.join(_conf_path("ICLR2025"), "tree_iclr2025")
+TREE_FOLDER = _reviewer_dir("ICLR2024", "tree")
 OUTPUT_ROOT = os.environ.get("CONSTRUCTIVENESS_OUTPUT_ROOT") or os.path.join(
     _HERE, "output"
 )
 
 HUMAN_OUTPUT = os.path.join(OUTPUT_ROOT, "iclr2026", "human", "all_results_lite.jsonl")
-SEA_OUTPUT = os.path.join(OUTPUT_ROOT, "neurlps2025", "sea", "all_results_lite.jsonl")
+SEA_OUTPUT = os.path.join(OUTPUT_ROOT, "neurips2025", "sea", "all_results_lite.jsonl")
 REVIEWER2_OUTPUT = os.path.join(
     OUTPUT_ROOT, "iclr2024", "reviewer2", "all_results_lite.jsonl"
 )
@@ -112,7 +112,7 @@ _NEURIPS2025_ROOT = _conf_path("NeurIPS2025")
 NEURIPS2025_HUMAN_FOLDER = os.path.join(
     _NEURIPS2025_ROOT, "human_reviews"
 )  # .json files
-NEURIPS2025_PAPER_IDS = os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurlps2025.txt")
+NEURIPS2025_PAPER_IDS = os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurips2025.txt")
 NEURIPS2025_HUMAN_OUTPUT = os.path.join(
     OUTPUT_ROOT, "neurips2025", "human", "all_results_lite.jsonl"
 )
@@ -124,11 +124,8 @@ _ICLR2026_ROOT = _conf_path("ICLR2026")
 
 # ── Tree review — per-conference ───────────────────────────────────────────────
 TREE_FOLDERS: dict[str, str] = {
-    "iclr2024": os.path.join(_ICLR2024_ROOT, "tree_iclr2024_2"),
-    "iclr2025": os.path.join(_ICLR2025_ROOT, "tree_iclr2025"),
-    "iclr2026": os.path.join(_ICLR2026_ROOT, "tree_iclr2026_2"),
-    "icml2025": os.path.join(_ICML2025_ROOT, "tree_icml2025_2"),
-    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "tree_neurips2025_2"),
+    conf.lower(): _reviewer_dir(conf, "tree")
+    for conf in ("ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025")
 }
 
 TREE_HUMAN_FOLDERS: dict[str, str] = {
@@ -144,7 +141,7 @@ TREE_PAPER_IDS: dict[str, str] = {
     "iclr2025": os.path.join(_ICLR2025_ROOT, "paper_ids_200_iclr2025.txt"),
     "iclr2026": os.path.join(_ICLR2026_ROOT, "paper_ids_200_iclr2026.txt"),
     "icml2025": os.path.join(_ICML2025_ROOT, "paper_ids_200_icml2025.txt"),
-    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurlps2025.txt"),
+    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurips2025.txt"),
 }
 
 TREE_OUTPUTS: dict[str, str] = {
@@ -165,11 +162,8 @@ TREE_OUTPUTS: dict[str, str] = {
 
 # ── Reviewer2 — per-conference ────────────────────────────────────────────────
 REVIEWER2_FOLDERS: dict[str, str] = {
-    "iclr2024": os.path.join(_ICLR2024_ROOT, "reviewer2_iclr2024"),
-    "iclr2025": os.path.join(_ICLR2025_ROOT, "reviewer2_iclr2025"),
-    "iclr2026": os.path.join(_ICLR2026_ROOT, "reviewer2_iclr2026"),
-    "icml2025": os.path.join(_ICML2025_ROOT, "reviewer2_icml2025"),
-    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "reviewer2_neurips2025"),
+    conf.lower(): _reviewer_dir(conf, "reviewer2")
+    for conf in ("ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025")
 }
 
 REVIEWER2_HUMAN_FOLDERS: dict[str, str] = {
@@ -185,7 +179,7 @@ REVIEWER2_PAPER_IDS: dict[str, str] = {
     "iclr2025": os.path.join(_ICLR2025_ROOT, "paper_ids_200_iclr2025.txt"),
     "iclr2026": os.path.join(_ICLR2026_ROOT, "paper_ids_200_iclr2026.txt"),
     "icml2025": os.path.join(_ICML2025_ROOT, "paper_ids_200_icml2025.txt"),
-    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurlps2025.txt"),
+    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurips2025.txt"),
 }
 
 REVIEWER2_OUTPUTS: dict[str, str] = {
@@ -208,11 +202,8 @@ REVIEWER2_OUTPUTS: dict[str, str] = {
 
 # ── CycleReview — per-conference ───────────────────────────────────────────────
 CYCLEREVIEW_FOLDERS: dict[str, str] = {
-    "iclr2024": os.path.join(_ICLR2024_ROOT, "cyclereview_iclr2024"),
-    "iclr2025": os.path.join(_ICLR2025_ROOT, "cyclereview_iclr2025"),
-    "iclr2026": os.path.join(_ICLR2026_ROOT, "cyclereview_iclr2026"),
-    "icml2025": os.path.join(_ICML2025_ROOT, "cyclereview_icml2025"),
-    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "cyclereview_neurlps2025"),
+    conf.lower(): _reviewer_dir(conf, "cyclereview")
+    for conf in ("ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025")
 }
 
 CYCLEREVIEW_PAPER_IDS: dict[str, str] = {
@@ -220,7 +211,7 @@ CYCLEREVIEW_PAPER_IDS: dict[str, str] = {
     "iclr2025": os.path.join(_ICLR2025_ROOT, "paper_ids_200_iclr2025.txt"),
     "iclr2026": os.path.join(_ICLR2026_ROOT, "paper_ids_200_iclr2026.txt"),
     "icml2025": os.path.join(_ICML2025_ROOT, "paper_ids_200_icml2025.txt"),
-    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurlps2025.txt"),
+    "neurips2025": os.path.join(_NEURIPS2025_ROOT, "paper_ids_200_neurips2025.txt"),
 }
 
 CYCLEREVIEW_OUTPUTS: dict[str, str] = {
@@ -1359,7 +1350,20 @@ def run_cyclereview(
 
 
 def main() -> None:
+    global HUMAN_FOLDER, SEA_FOLDER, REVIEWER2_FOLDER, DEEPREVIEW_FOLDER, TREE_FOLDER
     args = parse_args()
+    conference = {
+        "iclr2024": "ICLR2024",
+        "iclr2025": "ICLR2025",
+        "iclr2026": "ICLR2026",
+        "icml2025": "ICML2025",
+        "neurips2025": "NeurIPS2025",
+    }[args.conf]
+    HUMAN_FOLDER = _reviewer_dir(conference, "human")
+    SEA_FOLDER = _reviewer_dir(conference, "sea")
+    REVIEWER2_FOLDER = _reviewer_dir(conference, "reviewer2")
+    DEEPREVIEW_FOLDER = _reviewer_dir(conference, "deepreview")
+    TREE_FOLDER = _reviewer_dir(conference, "tree")
 
     pairs: list[tuple[str, str, str]] = []
     r2_pairs: list[tuple[str, str, str]] = []

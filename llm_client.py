@@ -521,6 +521,7 @@ class PRISMLLMClient:
         creds = get_provider_credentials(provider)
 
         api_key = cfg.get("api_key") or creds.get("api_key", "")
+        api_keys = cfg.get("api_keys") or creds.get("api_keys", "")
         base_url = cfg.get("base_url") or creds.get("base_url")
         model = cfg.get("model", "")
         temperature = _coerce_float(cfg.get("temperature"), 0.0)
@@ -547,6 +548,7 @@ class PRISMLLMClient:
             provider=provider,
             model=model,
             api_key=api_key,
+            api_keys=api_keys,
             base_url=base_url or endpoint,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -569,6 +571,7 @@ class PRISMLLMClient:
         provider: str = "openai",
         model: str = "",
         api_key: Optional[str] = None,
+        api_keys: Optional[Any] = None,
         base_url: Optional[str] = None,
         temperature: float = 0.0,
         max_tokens: int = 4096,
@@ -587,6 +590,12 @@ class PRISMLLMClient:
 
         self.model = model
         self.api_key = api_key or ""
+        if isinstance(api_keys, str):
+            self.api_keys = [key.strip() for key in api_keys.split(",") if key.strip()]
+        else:
+            self.api_keys = [str(key).strip() for key in (api_keys or []) if str(key).strip()]
+        if self.api_key and self.api_key not in self.api_keys:
+            self.api_keys.insert(0, self.api_key)
         self.base_url = base_url
         self.temperature = _coerce_float(temperature, 0.0)
         self.max_tokens = _coerce_int(max_tokens, 4096)
@@ -617,6 +626,9 @@ class PRISMLLMClient:
         self.rate_limit_tpm = rate_limit_tpm
 
         self._client = None
+        self._clients = []
+        self._client_index = 0
+        self._client_lock = threading.Lock()
         self._init_client()
 
     # Class-level rate limiter registry to share limiters across clients
@@ -702,17 +714,29 @@ class PRISMLLMClient:
         try:
             from openai import OpenAI
 
-            if not self.api_key:
+            if not self.api_keys:
                 raise RuntimeError(f"Missing API key for {name}.")
-            self._client = OpenAI(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                timeout=self.timeout,
-                max_retries=0,
-            )
+            self._clients = [
+                OpenAI(
+                    api_key=api_key,
+                    base_url=self.base_url,
+                    timeout=self.timeout,
+                    max_retries=0,
+                )
+                for api_key in self.api_keys
+            ]
+            self._client = self._clients[0]
             logger.info(f"[{self.label}] {name} ready (model={self.model})")
         except Exception as e:
             raise RuntimeError(f"Failed to init {name} client: {e}") from e
+
+    def _next_client(self):
+        if len(self._clients) <= 1:
+            return self._client
+        with self._client_lock:
+            client = self._clients[self._client_index]
+            self._client_index = (self._client_index + 1) % len(self._clients)
+            return client
 
 
     # ── Core Interface ─────────────────────────────────────────────────────
@@ -924,7 +948,7 @@ class PRISMLLMClient:
         attempts = max(1, self.max_retries + 1)
         for attempt in range(attempts):
             try:
-                resp = self._client.chat.completions.create(**request_kwargs)
+                resp = self._next_client().chat.completions.create(**request_kwargs)
                 return self._extract_response_text(resp)
             except Exception as exc:
                 err = str(exc)

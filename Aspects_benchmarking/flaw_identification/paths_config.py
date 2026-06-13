@@ -9,7 +9,7 @@ import sys
 # Load shared env (repo root)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from env_loader import (
-    DATA_ROOT, conf_path,
+    DATA_ROOT, conf_path, reviewer_dir,
     GOOGLE_API_KEY, GEMINI_MODEL,
     MIMO_API_KEY, MIMO_MODEL, MIMO_BASE_URL,
     AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT,
@@ -37,22 +37,6 @@ ICLR2025_DATA    = conf_path("ICLR2025")
 ICLR2026_DATA    = conf_path("ICLR2026")
 ICML2025_DATA    = conf_path("ICML2025")
 NEURIPS2025_DATA = conf_path("NeurIPS2025")
-
-
-def reviewer_dir(conference: str, reviewer: str) -> str:
-    """Return path to reviewer data folder.
-
-    Args:
-        conference: ICLR2024 | ICLR2025 | ICLR2026 | ICML2025 | NeurIPS2025
-        reviewer:   sea | tree | reviewer2 | deepreview | cyclereview | human
-    """
-    base = conf_path(conference)
-    # NeurIPS uses "neurlps" in folder names (original dataset spelling)
-    conf_lower = conference.lower().replace("neurips2025", "neurlps2025")
-    if reviewer == "human":
-        return os.path.join(base, "human_reviews")
-    return os.path.join(base, f"{reviewer}_{conf_lower}")
-
 
 # ---------------------------------------------------------------------------
 # Output dirs (relative to this module)

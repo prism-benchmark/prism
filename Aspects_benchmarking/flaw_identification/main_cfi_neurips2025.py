@@ -1,7 +1,7 @@
 """
 Flaw-Identification Pipeline – NeurIPS 2025 entry point.
 
-Data paths  : <DATA_ROOT>/Neurlps2025/
+Data paths  : <DATA_ROOT>/NeurIPS2025/
 Default LLM : Google Gemini 2.5 Flash Lite  (google-genai library)
 
 Key differences from ICLR / ICML pipelines:
@@ -70,17 +70,17 @@ from src.utils import (
 )
 
 # ---------------------------------------------------------------------------
-# Path configuration  (note: directory is spelled "Neurlps2025")
+# Path configuration
 # ---------------------------------------------------------------------------
-from paths_config import NEURIPS2025_DATA
-HUMAN_FOLDER      = os.path.join(NEURIPS2025_DATA, "human_reviews")
-SEA_FOLDER        = os.path.join(NEURIPS2025_DATA, "sea_neurlps2025")
-TREE_FOLDER       = os.path.join(NEURIPS2025_DATA, "tree_neurips2025_2")
-REVIEWER2_FOLDER  = os.path.join(NEURIPS2025_DATA, "reviewer2_neurips2025")
-DEEPREVIEW_FOLDER = os.path.join(NEURIPS2025_DATA, "deepreview_neurips2025")
-CYCLEREVIEW_FOLDER= os.path.join(NEURIPS2025_DATA, "cyclereview_neurips2025")
+from paths_config import NEURIPS2025_DATA, reviewer_dir
+HUMAN_FOLDER       = reviewer_dir("NeurIPS2025", "human")
+SEA_FOLDER         = reviewer_dir("NeurIPS2025", "sea")
+TREE_FOLDER        = reviewer_dir("NeurIPS2025", "tree")
+REVIEWER2_FOLDER   = reviewer_dir("NeurIPS2025", "reviewer2")
+DEEPREVIEW_FOLDER  = reviewer_dir("NeurIPS2025", "deepreview")
+CYCLEREVIEW_FOLDER = reviewer_dir("NeurIPS2025", "cyclereview")
 PAPERS_FOLDER     = os.path.join(NEURIPS2025_DATA, "papers")
-PAPER_IDS_FILE    = os.path.join(NEURIPS2025_DATA, "paper_ids_200_neurlps2025.txt")
+PAPER_IDS_FILE    = os.path.join(NEURIPS2025_DATA, "paper_ids_200_neurips2025.txt")
 OUTPUT_DIR        = os.path.join(_HERE, "output_cfi_neurips2025_2")
 
 VALID_MODES      = {"all", "cfi_only", "cps_only"}
@@ -136,11 +136,11 @@ def parse_args() -> argparse.Namespace:
         default="sea",
         help=(
             "LLM reviewer source:\n"
-            "  sea         – SEA reviews from sea_neurlps2025/ (default)\n"
-            "  tree        – Tree reviews from tree_neurlps2025/\n"
-            "  reviewer2   – Reviewer2 reviews from reviewer2_neurlps2025/\n"
-            "  deepreview  – DeepReview JSON from deepreview_neurlps2025/\n"
-            "  cyclereview – CycleReview JSON from cyclereview_neurlps2025/"
+            "  sea         – SEA reviews from sea_neurips2025/ (default)\n"
+            "  tree        – Tree reviews from tree_neurips2025/\n"
+            "  reviewer2   – Reviewer2 reviews from reviewer2_neurips2025/\n"
+            "  deepreview  – DeepReview JSON from deepreview_neurips2025/\n"
+            "  cyclereview – CycleReview JSON from cyclereview_neurips2025/"
         ),
     )
     parser.add_argument(
@@ -406,7 +406,13 @@ def _load_cfi_cache(path: str) -> list[dict]:
 
 def _load_target_ids() -> set[str]:
     if not os.path.exists(PAPER_IDS_FILE):
-        raise FileNotFoundError(f"Paper-IDs file not found: {PAPER_IDS_FILE}")
+        if not os.path.isdir(PAPERS_FOLDER):
+            raise FileNotFoundError(f"Papers folder not found: {PAPERS_FOLDER}")
+        return {
+            name.removesuffix(".grobid.txt").removesuffix(".txt")
+            for name in os.listdir(PAPERS_FOLDER)
+            if name.endswith((".txt", ".grobid.txt"))
+        }
     ids: set[str] = set()
     with open(PAPER_IDS_FILE, "r", encoding="utf-8") as f:
         for line in f:
@@ -602,4 +608,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

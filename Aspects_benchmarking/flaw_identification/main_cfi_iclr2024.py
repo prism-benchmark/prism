@@ -70,13 +70,13 @@ from src.utils import (
 # ---------------------------------------------------------------------------
 # Path configuration  –  all data lives under ICLR2024_DATA
 # ---------------------------------------------------------------------------
-from paths_config import ICLR2024_DATA
-HUMAN_FOLDER         = os.path.join(ICLR2024_DATA, "human_reviews")
-SEA_FOLDER           = os.path.join(ICLR2024_DATA, "sea_iclr2024")
-TREE_FOLDER          = os.path.join(ICLR2024_DATA, "tree_iclr2024_2")
-REVIEWER2_FOLDER     = os.path.join(ICLR2024_DATA, "reviewer2_iclr2024")
-DEEPREVIEW_FOLDER    = os.path.join(ICLR2024_DATA, "deepreview_iclr2024")
-CYCLEREVIEW_FOLDER   = os.path.join(ICLR2024_DATA, "cyclereview_iclr2024")
+from paths_config import ICLR2024_DATA, reviewer_dir
+HUMAN_FOLDER         = reviewer_dir("ICLR2024", "human")
+SEA_FOLDER           = reviewer_dir("ICLR2024", "sea")
+TREE_FOLDER          = reviewer_dir("ICLR2024", "tree")
+REVIEWER2_FOLDER     = reviewer_dir("ICLR2024", "reviewer2")
+DEEPREVIEW_FOLDER    = reviewer_dir("ICLR2024", "deepreview")
+CYCLEREVIEW_FOLDER   = reviewer_dir("ICLR2024", "cyclereview")
 PAPERS_FOLDER        = os.path.join(ICLR2024_DATA, "papers")
 PAPER_IDS_FILE       = os.path.join(ICLR2024_DATA, "paper_ids_200_iclr2024.txt")
 OUTPUT_DIR           = os.path.join(_HERE, "output_cfi_iclr2024_2")
@@ -408,7 +408,13 @@ def _load_cfi_cache(jsonl_path: str) -> list[dict]:
 
 def _load_target_paper_ids() -> set[str]:
     if not os.path.exists(PAPER_IDS_FILE):
-        raise FileNotFoundError(f"Paper-IDs file not found: {PAPER_IDS_FILE}")
+        if not os.path.isdir(PAPERS_FOLDER):
+            raise FileNotFoundError(f"Papers folder not found: {PAPERS_FOLDER}")
+        return {
+            name.removesuffix(".grobid.txt").removesuffix(".txt")
+            for name in os.listdir(PAPERS_FOLDER)
+            if name.endswith((".txt", ".grobid.txt"))
+        }
     ids: set[str] = set()
     with open(PAPER_IDS_FILE, "r", encoding="utf-8") as f:
         for line in f:
@@ -624,4 +630,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

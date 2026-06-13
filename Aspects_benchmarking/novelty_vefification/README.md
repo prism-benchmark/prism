@@ -121,34 +121,34 @@ export SEMANTIC_SCHOLAR_API_KEYS="key1,key2,key3"
 
 ## Data Directory Structure
 
-The pipeline expects data organized by conference:
+The top-level PRISM runner passes the normalized `DATA_ROOT` used by all
+aspects:
 
 ```
-paper_data/
-├── ICLR_2024/
-│   ├── grobid_fulltext/          # Paper full texts (.txt)
-│   │   ├── paper_id_1.txt
-│   │   └── paper_id_2.txt
-│   └── json/                     # Review JSONs
-│       ├── paper_id_1.json
-│       └── paper_id_2.json
-├── ICLR_2025/
-│   ├── grobid_fulltext/
-│   └── json/
-├── ICLR_2026/
-│   ├── grobid_fulltext/
-│   └── json/
-├── ICML_2025/
-│   ├── grobid_fulltext/
-│   └── json/
-└── NeurIPS_2025/
-    ├── grobid_fulltext/
-    └── json/
+DATA_ROOT/
+├── ICLR2024/
+│   ├── papers/                   # {paper_id}.txt or {paper_id}.grobid.txt
+│   ├── human_reviews/            # {paper_id}.json
+│   ├── sea/
+│   ├── tree/
+│   ├── reviewer2/
+│   ├── deepreview/
+│   └── cyclereview/
+├── ICLR2025/
+├── ICLR2026/
+├── ICML2025/
+└── NeurIPS2025/
 ```
 
-Each conference contains:
-- `grobid_fulltext/` — paper full texts (`.txt`, one file per paper)
-- `json/` — peer reviews (`.json`, one file per paper, matching paper IDs)
+The original Hugging Face artifact uses folders such as `ICLR_2024/json/`
+and `ICLR_2024/grobid_fulltext/`. Run `python run.py --setup-data` or
+`Data/map_hf_to_aspect_layout.py` before using that raw format.
+
+Each normalized conference directory contains:
+- `papers/` — paper full texts, one file per paper
+- `human_reviews/` — peer-review JSON, matching paper IDs
+- one plain directory per generated reviewer: `sea/`, `tree/`, `reviewer2/`,
+  `deepreview/`, and `cyclereview/`
 
 ### Review JSON Format
 

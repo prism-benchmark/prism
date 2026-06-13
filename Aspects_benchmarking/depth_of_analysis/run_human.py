@@ -58,7 +58,11 @@ def save_result(paper_id: str, result: dict):
 #  Main Pipeline
 # ================================================================
 
-def run_human_pipeline(workers: int = 1):
+def run_human_pipeline(conference: str = "ICLR2026", workers: int = 1):
+    config.HUMAN_DIR = config.HUMAN_DIRS[conference]
+    config.OUTPUT_HUMAN_DIR = os.path.join(
+        config.OUTPUT_ROOT, f"human_{conference.lower()}"
+    )
     # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
     from src.evaluator import DepthOfAnalysisEvaluator
     evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
@@ -181,6 +185,12 @@ if __name__ == "__main__":
         description="DoA Pipeline — Phase 1: Process Human Reviews"
     )
     parser.add_argument(
+        "--conference",
+        choices=list(config.HUMAN_DIRS),
+        default="ICLR2026",
+        help="Conference folder to process.",
+    )
+    parser.add_argument(
         "--workers", type=int, default=1,
         help="Số lượng luồng xử lý song song (mặc định: 1, tuần tự)"
     )
@@ -195,5 +205,4 @@ if __name__ == "__main__":
         except ValueError:
             pass
 
-    run_human_pipeline(workers=workers)
-
+    run_human_pipeline(conference=args.conference, workers=workers)

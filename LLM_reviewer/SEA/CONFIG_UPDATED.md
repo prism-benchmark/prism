@@ -2,12 +2,12 @@
 
 ## Changes Made
 
-All vLLM scripts can be configured for an ICLR-style `grobid_fulltext` dataset:
+All vLLM scripts can be configured for the canonical PRISM `papers/` input directory:
 
 ### Updated Files
 
 1. **vllm_config.py**
-   - INPUT_DIR: `SEA_INPUT_DIR` or `/path/to/data/ICLR2025/grobid_fulltext`
+   - INPUT_DIR: `SEA_INPUT_DIR` or `/path/to/DATA_ROOT/ICLR2025/papers`
    - File format: `.grobid.txt`
    - PAPER_IDS_FILE: `SEA_PAPER_IDS_FILE` or `/path/to/data/ICLR2025/paper_ids.txt`
    - OUTPUT_DIR: `SEA_OUTPUT_DIR` or `outputs/sea_reviews`

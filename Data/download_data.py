@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download the PRISM subset artifacts from Hugging Face.
+"""Download PRISM artifacts from Hugging Face.
 
 The dataset README documents two subset files in
 `anoyresearcher/prism_paper_data`:
@@ -26,11 +26,12 @@ REVISION = "main"
 SUBSET_METADATA = "subset_1000.parquet"
 SUBSET_ARCHIVE = "SUBSET_1000.zip"
 SAMPLE_ARCHIVE = "Final_LLM_Reviewer_Data_Sample.zip"
+DEMO_ARCHIVE = "demo_data.zip"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Download the PRISM SUBSET_1000 files from Hugging Face Hub."
+        description="Download PRISM files from Hugging Face Hub."
     )
     parser.add_argument(
         "--output-dir",

@@ -35,9 +35,9 @@ bash run_vllm.sh
 ```bash
 python run_review_vllm.py \
     --model "Qwen/Qwen2-7B-Instruct" \
-    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
+    --input-dir "/path/to/DATA_ROOT/ICLR2025/papers" \
     --paper-ids "/path/to/data/ICLR2025/paper_ids.txt" \
-    --output-dir "outputs/sea_iclr2025" \
+    --output-dir "/path/to/DATA_ROOT/ICLR2025/sea" \
     --batch-size 8 \
     --tensor-parallel-size 1 \
     --skip-completed
@@ -174,8 +174,8 @@ bash run_vllm.sh
 ```bash
 python run_review_vllm.py \
     --model "Qwen/Qwen2-7B-Instruct" \
-    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
-    --output-dir "outputs/sea_iclr2025" \
+    --input-dir "/path/to/DATA_ROOT/ICLR2025/papers" \
+    --output-dir "/path/to/DATA_ROOT/ICLR2025/sea" \
     --no-skip-completed
 ```
 
@@ -188,8 +188,8 @@ bash run_vllm.sh  # Automatically skips completed papers
 ```bash
 python run_review_vllm.py \
     --model "mistralai/Mistral-7B-Instruct-v0.1" \
-    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
-    --output-dir "outputs/sea_iclr2025"
+    --input-dir "/path/to/DATA_ROOT/ICLR2025/papers" \
+    --output-dir "/path/to/DATA_ROOT/ICLR2025/sea"
 ```
 
 ## Model Recommendations

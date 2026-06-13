@@ -27,7 +27,7 @@ from ai_config import (  # noqa: E402
 )
 
 __all__ = [
-    "DATA_ROOT", "conf_path", "paper_ids_file",
+    "DATA_ROOT", "conf_path", "paper_dir", "reviewer_dir", "paper_ids_file",
     "GOOGLE_API_KEY", "GEMINI_MODEL",
     "MIMO_API_KEY", "MIMO_MODEL", "MIMO_BASE_URL",
     "OPENAI_API_KEY",
@@ -57,6 +57,17 @@ def conf_path(conference: str) -> str:
         )
     folder = _CONF_DIRS.get(conference, conference)
     return os.path.join(DATA_ROOT, folder)
+
+
+def paper_dir(conference: str) -> str:
+    """Return the normalized paper-text directory."""
+    return os.path.join(conf_path(conference), "papers")
+
+
+def reviewer_dir(conference: str, reviewer: str) -> str:
+    """Return a review directory from the normalized input layout."""
+    folder = "human_reviews" if reviewer.lower() == "human" else reviewer
+    return os.path.join(conf_path(conference), folder)
 
 
 def paper_ids_file(conference: str, subset: int = 50) -> str:

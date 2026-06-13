@@ -41,7 +41,7 @@ pip install vllm>=0.3.0
 ### 2. Basic Configuration (Already Set)
 The default config can be overridden with environment variables:
 ```
-Input:   SEA_INPUT_DIR or data/grobid_fulltext
+Input:   SEA_INPUT_DIR or <DATA_ROOT>/<Conference>/papers
 Format:  .grobid.txt files
 Paper IDs: SEA_PAPER_IDS_FILE or data/paper_ids.txt
 Output:  SEA_OUTPUT_DIR or outputs/sea_reviews
@@ -65,9 +65,9 @@ bash run_vllm.sh
 **Option C: Direct Python (Full Control)**
 ```bash
 python run_review_vllm.py \
-    --input-dir "/path/to/data/ICLR2025/grobid_fulltext" \
+    --input-dir "/path/to/DATA_ROOT/ICLR2025/papers" \
     --paper-ids "/path/to/data/ICLR2025/paper_ids.txt" \
-    --output-dir "outputs/sea_iclr2025"
+    --output-dir "/path/to/DATA_ROOT/ICLR2025/sea"
 ```
 
 ## Performance Tuning
@@ -156,7 +156,7 @@ pip install vllm
 **"Cannot access configured input paths"**
 Check that paths exist:
 ```bash
-ls /path/to/data/ICLR2025/grobid_fulltext | head
+ls /path/to/DATA_ROOT/ICLR2025/papers | head
 ls /path/to/data/ICLR2025/paper_ids.txt
 ```
 

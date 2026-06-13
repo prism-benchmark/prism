@@ -49,14 +49,14 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 
 # ---------------------------------------------------------------------------
-# Conference definitions — single layout: grobid_fulltext/ + json/
+# Conference definitions for the canonical DATA_ROOT layout.
 # ---------------------------------------------------------------------------
 CONFERENCES = [
-    {"name": "ICLR_2024",    "paper_dir": "grobid_fulltext", "review_dir": "json", "paper_ext": ".grobid.txt", "year": 2024},
-    {"name": "ICLR_2025",    "paper_dir": "grobid_fulltext", "review_dir": "json", "paper_ext": ".grobid.txt", "year": 2025},
-    {"name": "ICLR_2026",    "paper_dir": "grobid_fulltext", "review_dir": "json", "paper_ext": ".grobid.txt", "year": 2026},
-    {"name": "ICML_2025",    "paper_dir": "grobid_fulltext", "review_dir": "json", "paper_ext": ".grobid.txt", "year": 2025},
-    {"name": "NeurIPS_2025", "paper_dir": "grobid_fulltext", "review_dir": "json", "paper_ext": ".grobid.txt", "year": 2025},
+    {"name": "ICLR_2024",    "folder": "ICLR2024",    "paper_dir": "papers", "paper_ext": ".txt", "year": 2024},
+    {"name": "ICLR_2025",    "folder": "ICLR2025",    "paper_dir": "papers", "paper_ext": ".txt", "year": 2025},
+    {"name": "ICLR_2026",    "folder": "ICLR2026",    "paper_dir": "papers", "paper_ext": ".txt", "year": 2026},
+    {"name": "ICML_2025",    "folder": "ICML2025",    "paper_dir": "papers", "paper_ext": ".txt", "year": 2025},
+    {"name": "NeurIPS_2025", "folder": "NeurIPS2025", "paper_dir": "papers", "paper_ext": ".txt", "year": 2025},
 ]
 
 REVIEW_TYPE_DIRS = {
@@ -110,7 +110,7 @@ def resolve_review_dir(conf_root: Path, conf: dict, review_type: str) -> Optiona
 
 def discover_papers(data_root: Path, conf: dict, review_type: str = "human") -> List[dict]:
     """Return list of paper entries for a conference."""
-    conf_root = data_root / conf["name"]
+    conf_root = data_root / conf.get("folder", conf["name"])
     paper_dir = conf_root / conf["paper_dir"]
     review_dir = resolve_review_dir(conf_root, conf, review_type)
     if not paper_dir.exists() or review_dir is None:

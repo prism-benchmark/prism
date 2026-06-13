@@ -34,7 +34,7 @@ import sys as _sys
 _sys.path.insert(0, _sys.path[0] if _sys.path else '') 
 from config import HUMAN_DIRS as _HUMAN_DIRS
 ICML2025_HUMAN_DIR = _HUMAN_DIRS['ICML2025']
-ICML2025_PAPER_IDS_FILE = r"E:\Final_LLM_Reviewer_Data\ICML2025\paper_ids_200_icml2025.txt"
+ICML2025_PAPER_IDS_FILE = config.paper_ids_file("ICML2025", 200)
 
 PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR   = os.path.join(PIPELINE_DIR, "output", "human_icml2025")
@@ -254,5 +254,4 @@ if __name__ == "__main__":
         paper_ids_file=args.paper_ids,
         run_all=args.all
     )
-
 

@@ -30,8 +30,11 @@ python compare_human_llm.py
 
 ## Config
 
-Edit `config.py` to set:
-- `DATA_ROOT` — path to `Final_LLM_Reviewer_Data/`
-- `PAPER_IDS_50` — per-conference 50-paper ID files
-- `OUTPUT_DIR` — where results JSON files are written
+Set `DATA_ROOT` in the repository root `.env`. Each conference directory must
+contain `human_reviews/`, `papers/`, `sea/`, `tree/`, `reviewer2/`,
+`deepreview/`, and `cyclereview/`. Optional 50-paper manifests use
+`paper_ids_50_<conference>.txt`, for example
+`paper_ids_50_neurips2025.txt`.
 
+`config.py` derives all input paths from `DATA_ROOT`; `OUTPUT_DIR` controls
+where result JSON files are written.

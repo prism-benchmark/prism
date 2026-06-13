@@ -2,6 +2,14 @@
 
 A unified, anonymized benchmark framework for evaluating the quality of AI-generated academic paper reviews across four complementary dimensions: **Depth of Analysis**, **Novelty Assessment**, **Flaw Identification & Prioritization**, and **Multi-Dimensional Constructiveness**.
 
+The fastest path to running the repo is:
+
+1. install dependencies,
+2. copy `.env.example` to `.env`,
+3. set `DATA_ROOT` and your API key(s),
+4. choose the provider/model in `llm_config.yaml`,
+5. run `python ../run.py` from `Aspects_benchmarking/`, or `python run.py` from the repo root.
+
 ---
 
 ## Table of Contents
@@ -82,15 +90,14 @@ For double-blind review, use an anonymized artifact host and avoid committing pr
 After downloading, the folder must have this layout:
 
 ```
-Final_LLM_Reviewer_Data/
+DATA_ROOT/
 ├── ICLR2024/
 │   ├── human_reviews/              # one {paper_id}.json per paper
-│   ├── sea_iclr2024/               # {paper_id}.txt
-│   ├── tree_iclr2024/              # {paper_id}_review.json
-│   ├── tree_iclr2024_2/            # (alternate run)
-│   ├── reviewer2_iclr2024/         # {paper_id}.txt
-│   ├── deepreview_iclr2024/        # {paper_id}.json
-│   ├── cyclereview_iclr2024/       # {paper_id}.json
+│   ├── sea/                         # {paper_id}.txt
+│   ├── tree/                        # {paper_id}_review.json
+│   ├── reviewer2/                   # {paper_id}.txt
+│   ├── deepreview/                  # {paper_id}.json
+│   ├── cyclereview/                 # {paper_id}.json
 │   ├── papers/                     # {paper_id}.grobid.txt  (full paper text)
 │   ├── paper_ids_200_iclr2024.txt  # all 200 paper IDs
 │   └── paper_ids_50_iclr2024.txt   # 50-paper robustness subset
@@ -98,19 +105,58 @@ Final_LLM_Reviewer_Data/
 ├── ICLR2025/    (same sub-folder layout)
 ├── ICLR2026/    (same sub-folder layout)
 ├── ICML2025/    (same sub-folder layout)
-└── Neurlps2025/ # NeurIPS 2025 — note: dataset uses this exact spelling
+└── NeurIPS2025/ (same sub-folder layout)
     ├── human_reviews/
-    ├── sea_neurlps2025/
-    ├── tree_neurips2025/
-    ├── reviewer2_neurips2025/
-    ├── deepreview_neurips2025/
-    ├── cyclereview_neurlps2025/
+    ├── sea/
+    ├── tree/
+    ├── reviewer2/
+    ├── deepreview/
+    ├── cyclereview/
     ├── papers/
-    ├── paper_ids_200_neurlps2025.txt
+    ├── paper_ids_200_neurips2025.txt
     └── paper_ids_50_neurips2025.txt
 ```
 
-> **Note on the `Neurlps2025` spelling:** the original dataset was released with this folder name. All scripts use it verbatim for compatibility.
+---
+
+## Configuration
+
+There are two config files to care about:
+
+- `.env` stores local paths and credentials.
+- `llm_config.yaml` selects the provider and model for each aspect or reviewer.
+
+Minimum setup:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` with at least:
+
+```bash
+DATA_ROOT=/absolute/path/to/PRISM/Data/input
+GOOGLE_API_KEY=...   # if you use Gemini
+OPENAI_API_KEY=...    # if you use OpenAI
+MIMO_API_KEY=...      # if you use Xiaomi Mimo
+LLM_API_KEY=...       # if you use OpenRouter or another OpenAI-compatible provider
+```
+
+In `llm_config.yaml`, set the provider/model you actually want to run. Example:
+
+```yaml
+providers:
+  together:
+    api_key: ${TOGETHER_API_KEY}
+    base_url: https://api.together.xyz/v1
+
+aspects:
+  constructiveness:
+    provider: together
+    model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+```
+
+Any OpenAI-compatible client works as long as you add it under `providers` and point the aspect/reviewer config at that provider.
 
 ---
 
@@ -154,16 +200,16 @@ Final_LLM_Reviewer_Data/
 
 ## Quick Start (unified runner)
 
-The simplest way to run experiments is from the **repo root** using `run.py`:
+From the repo root:
 
 ```bash
-cd ..
-python run.py --setup-data          # download dataset (~4 GB)
-python run.py --only constructiveness --limit 10  # quick test
-python run.py                       # full paper experiment
+pip install -r requirements.txt
+python run.py --setup-data
+python run.py --dry-run
+python run.py --profile quick
 ```
 
-See `../README.md` for the complete workflow.
+Use `python run.py --list` to inspect the active aspects, reviewers, profiles, and provider/model selection.
 
 ---
 
@@ -181,17 +227,20 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` with your `DATA_ROOT` and API keys.
+Edit `.env` with your `DATA_ROOT` and the API key for the provider you selected in `llm_config.yaml`.
 
 ### 3. Verify
 
 ```bash
-python -c "
-from env_loader import DATA_ROOT, GOOGLE_API_KEY
-print('DATA_ROOT     :', DATA_ROOT)
-print('Gemini key set:', bool(GOOGLE_API_KEY))
-"
+python run.py --list
+python run.py --dry-run
+python run.py --workers 16 --limit 20
 ```
+
+The unified runner evaluates papers concurrently (8 workers by default). Set
+`PRISM_MAX_WORKERS` in `.env` for a persistent default, or pass `--workers N`
+for one run. The runner maps this setting to each aspect's native concurrency
+flag, including novelty's Task 1, Task 2, and Task 3 workers.
 
 ---
 
@@ -199,7 +248,7 @@ print('Gemini key set:', bool(GOOGLE_API_KEY))
 
 ### Depth of Analysis
 
-#### LLM Reviews — Gemini evaluator
+#### LLM Reviews — LLM evaluator
 
 ```bash
 # Run a single source (conference is encoded in the source name)
@@ -210,16 +259,17 @@ python depth_of_analysis/run_llm.py --source tree_icml2025
 python depth_of_analysis/run_llm.py --source cyclereview_neurips2025
 ```
 
-Available `--source` values (defined in `depth_of_analysis/config.py``:  
-`sea_iclr2024/2025/2026`, `sea_icml2025`, `sea_neurlps2025`,  
-`tree_iclr2024/2025/2026`, `tree_icml2025`, `tree_neurips2025`,  
-`reviewer2_iclr2024/2025/2026`, `reviewer2_icml2025`, `reviewer2_neurips2025`,  
-`deepreview_iclr2024/2025/2026`, `deepreview_icml2025`, `deepreview_neurips2025`,  
-`cyclereview_iclr2024/2025/2026`, `cyclereview_icml2025`, `cyclereview_neurlps2025`
+Available `--source` identifiers (defined in
+`depth_of_analysis/config.py`; these are not directory names):
+`sea_iclr2024/2025/2026`, `sea_icml2025`, `sea_neurips2025`,
+`tree_iclr2024/2025/2026`, `tree_icml2025`, `tree_neurips2025`,
+`reviewer2_iclr2024/2025/2026`, `reviewer2_icml2025`, `reviewer2_neurips2025`,
+`deepreview_iclr2024/2025/2026`, `deepreview_icml2025`, `deepreview_neurips2025`,
+`cyclereview_iclr2024/2025/2026`, `cyclereview_icml2025`, `cyclereview_neurips2025`
 
-The runner reads the active LLM provider/model from `llm_config.yaml`. Use
-`llm_config.yaml` to switch between evaluators (Gemini, Mimo, OpenAI, etc.)
-without changing the script.
+The runner reads the active provider/model from `llm_config.yaml`. Use that
+file to switch between Gemini, OpenAI, Mimo, OpenRouter, or any other
+OpenAI-compatible client without changing the script.
 
 #### Human Reviews
 
@@ -251,7 +301,7 @@ python depth_of_analysis/evaluate_all.py --conference iclr2024
 
 ### Constructiveness
 
-#### LLM Reviews — Gemini evaluator
+#### LLM Reviews — LLM evaluator
 
 ```bash
 python constructiveness/run_constructiveness.py --mode reviewer2   --conf iclr2025
@@ -266,7 +316,7 @@ python constructiveness/run_constructiveness.py --mode reviewer2 --conf iclr2025
 
 `--conf` choices: `iclr2024` | `iclr2025` | `iclr2026` | `icml2025` | `neurips2025`
 
-#### Human Reviews — Gemini evaluator
+#### Human Reviews — LLM evaluator
 
 ```bash
 python constructiveness/run_constructiveness.py --mode human --conf iclr2024
@@ -295,7 +345,7 @@ Three modes per script:
 | `all` | `cfi_only` + compute nCPS prioritization metrics |
 | `cps_only` | Load cached JSONL, compute nCPS only |
 
-#### LLM Reviews — Gemini evaluator
+#### LLM Reviews — LLM evaluator
 
 ```bash
 # ICLR 2024
@@ -314,7 +364,7 @@ python flaw_identification/main_cfi_icml2025.py --mode all --llm-type reviewer2
 python flaw_identification/main_cfi_neurips2025.py --mode cfi_only --llm-type deepreview
 ```
 
-#### Human Reviews — Gemini evaluator
+#### Human Reviews — LLM evaluator
 
 ```bash
 python flaw_identification/main_cfi_iclr2024.py    --mode cfi_only --llm-type human
@@ -324,9 +374,9 @@ python flaw_identification/main_cfi_icml2025.py    --mode cfi_only --llm-type hu
 python flaw_identification/main_cfi_neurips2025.py --mode cfi_only --llm-type human
 ```
 
-The runner reads the active LLM provider/model from `llm_config.yaml`. Use
-`llm_config.yaml` to switch between evaluators (Gemini, Mimo, OpenAI, etc.)
-without changing the script.
+The runner reads the active provider/model from `llm_config.yaml`. Use that
+file to switch between Gemini, OpenAI, Mimo, OpenRouter, or any other
+OpenAI-compatible client without changing the script.
 
 #### Aggregate & compare
 

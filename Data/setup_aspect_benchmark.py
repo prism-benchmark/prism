@@ -1,215 +1,303 @@
 #!/usr/bin/env python3
-"""End-to-end setup for the PRISM aspect-benchmark experiments.
-
-This is the single entry point reviewers should use. It performs:
-
-  1. Download `SUBSET_1000.zip` (raw papers + human reviews) from Hugging Face.
-  2. Download `Final_LLM_Reviewer_Data_Sample.zip` (LLM reviewer outputs).
-  3. Extract both archives.
-  4. Map the SUBSET_1000 layout into Final_LLM_Reviewer_Data/ (the layout
-     used by Aspects_benchmarking/) and overlay the LLM reviewer sample on
-     top so the `sea_*`, `tree_*`, `reviewer2_*`, `deepreview_*`,
-     `cyclereview_*` folders are populated.
-  5. Generate `paper_ids_50_*` subset files.
-  6. (Optionally) write DATA_ROOT into Aspects_benchmarking/.env.
-  7. Clean up the downloaded zips and intermediate extractions, leaving
-     `Data/` containing only the prepared `Final_LLM_Reviewer_Data/`.
-
-Quick reviewer flow:
-
-    python3 Data/setup_aspect_benchmark.py --write-env
-
-After this finishes, fill in API keys in Aspects_benchmarking/.env and run
-any of the aspect scripts documented in Aspects_benchmarking/README.md.
-"""
+"""Download and install the canonical PRISM demo dataset."""
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import shutil
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(THIS_DIR))
+REPO_ROOT = THIS_DIR.parent
+DEFAULT_OUTPUT = THIS_DIR / "input"
+CONFERENCES = ("ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025")
+REVIEW_DIRS = (
+    "human_reviews",
+    "sea",
+    "reviewer2",
+    "tree",
+    "deepreview",
+    "cyclereview",
+)
 
-import download_data            # noqa: E402
-import map_hf_to_aspect_layout  # noqa: E402
+sys.path.insert(0, str(THIS_DIR))
+import download_data  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Download PRISM data and prepare it for Aspects_benchmarking."
+        description="Download, extract, validate, and configure PRISM demo data."
     )
     parser.add_argument(
-        "--subset-source",
+        "--source",
         type=Path,
         default=None,
-        help=(
-            "Optional pre-downloaded SUBSET_1000.zip / extracted directory. "
-            "When given, the SUBSET_1000 download step is skipped."
-        ),
-    )
-    parser.add_argument(
-        "--sample-source",
-        type=Path,
-        default=None,
-        help=(
-            "Optional pre-downloaded Final_LLM_Reviewer_Data_Sample.zip / "
-            "extracted directory. When given, the sample download is skipped."
-        ),
-    )
-    parser.add_argument(
-        "--no-sample",
-        action="store_true",
-        help="Skip downloading/overlaying the LLM reviewer sample archive.",
-    )
-    parser.add_argument(
-        "--download-dir",
-        type=Path,
-        default=THIS_DIR,
-        help="Where to download the Hugging Face artifacts (default: Data/).",
+        help="Optional local demo_data.zip or extracted dataset directory.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=THIS_DIR / "Final_LLM_Reviewer_Data",
-        help="Final DATA_ROOT directory (default: Data/Final_LLM_Reviewer_Data).",
-    )
-    parser.add_argument(
-        "--materialize",
-        choices=("symlink", "hardlink", "copy"),
-        default="copy",
-        help=(
-            "How per-paper files are placed in DATA_ROOT (default: copy, so "
-            "the prepared dataset survives cleanup of the download cache)."
-        ),
-    )
-    parser.add_argument(
-        "--max-papers-per-venue",
-        type=int,
-        default=200,
-        help="Cap papers per venue (default: 200, matches the paper experiments).",
-    )
-    parser.add_argument(
-        "--write-env",
-        action="store_true",
-        help="Write DATA_ROOT into Aspects_benchmarking/.env.",
-    )
-    parser.add_argument(
-        "--keep-downloads",
-        action="store_true",
-        help=(
-            "Keep the downloaded zips and extracted intermediates in --download-dir. "
-            "By default they are deleted after the prepared DATA_ROOT is built."
-        ),
+        default=DEFAULT_OUTPUT,
+        help="DATA_ROOT destination (default: Data/input).",
     )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Re-download and overwrite an existing prepared DATA_ROOT.",
+        help="Replace an existing output directory and re-download the archive.",
+    )
+    parser.add_argument(
+        "--keep-download",
+        action="store_true",
+        help="Keep Data/demo_data.zip after a successful setup.",
     )
     parser.add_argument(
         "--token",
-        default=None,
-        help="Hugging Face token (defaults to HF_TOKEN environment variable).",
+        default=os.environ.get("HF_TOKEN"),
+        help="Hugging Face token (default: HF_TOKEN).",
     )
+    # Kept for compatibility with the existing `python run.py --setup-data` call.
+    parser.add_argument("--write-env", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
 
 
-def _download(filename: str, download_dir: Path, token: str | None, force: bool) -> Path:
-    download_dir.mkdir(parents=True, exist_ok=True)
-    print(f"== Downloading {filename} -> {download_dir}")
-    return download_data.download_file(filename, download_dir, token, force)
+def safe_extract(archive_path: Path, target_dir: Path) -> None:
+    target_root = target_dir.resolve()
+    with zipfile.ZipFile(archive_path) as archive:
+        for member in archive.infolist():
+            member_path = (target_root / member.filename).resolve()
+            if member_path != target_root and target_root not in member_path.parents:
+                raise ValueError(f"Unsafe archive member: {member.filename}")
+        archive.extractall(target_root)
 
 
-def _cleanup(paths: list[Path]) -> None:
-    for path in paths:
-        if not path or not path.exists():
+def find_data_root(root: Path) -> Path:
+    # Some archives retain an older Data/input fixture alongside the current
+    # dataset at input/. Prefer the current top-level layout when both exist.
+    candidates = (root / "input", root / "Data" / "input", root)
+    for candidate in candidates:
+        if all((candidate / conference).is_dir() for conference in CONFERENCES):
+            return candidate
+    for candidate in root.rglob("input"):
+        if all((candidate / conference).is_dir() for conference in CONFERENCES):
+            return candidate
+    raise ValueError(
+        "Archive does not contain the expected Data/input/<conference> layout."
+    )
+
+
+def _file_ids(folder: Path) -> set[str]:
+    ids: set[str] = set()
+    for path in folder.iterdir():
+        if not path.is_file():
             continue
-        try:
-            if path.is_dir():
-                shutil.rmtree(path, ignore_errors=True)
-            else:
-                path.unlink()
-            print(f"Removed {path}")
-        except OSError as exc:
-            print(f"Could not remove {path}: {exc}", file=sys.stderr)
+        name = path.name
+        if name.endswith("_review.json"):
+            ids.add(name.removesuffix("_review.json"))
+        elif name.endswith(".grobid.txt"):
+            ids.add(name.removesuffix(".grobid.txt"))
+        elif path.suffix in {".txt", ".json"}:
+            ids.add(path.stem)
+    return ids
+
+
+def _nonempty_text_file(path: Path) -> bool:
+    try:
+        return bool(path.read_text(encoding="utf-8").strip())
+    except (OSError, UnicodeError):
+        return False
+
+
+def _has_text(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _valid_review_json(path: Path, reviewer: str) -> bool:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+
+    if reviewer == "human_reviews":
+        reviews = data.get("reviews")
+        return isinstance(reviews, list) and any(
+            isinstance(review, dict) and any(_has_text(value) for value in review.values())
+            for review in reviews
+        )
+    if reviewer == "tree":
+        return _has_text(data.get("full_review"))
+    if reviewer == "deepreview":
+        generated = data.get("generated_review")
+        if not isinstance(generated, list):
+            return False
+        return any(
+            isinstance(item, dict)
+            and isinstance(item.get("reviews"), list)
+            and any(
+                isinstance(review, dict) and _has_text(review.get("text"))
+                for review in item["reviews"]
+            )
+            for item in generated
+        )
+    if reviewer == "cyclereview":
+        generated = data.get("generated_review")
+        if not isinstance(generated, dict):
+            return False
+        if _has_text(generated.get("content")):
+            return True
+        reviews = generated.get("reviews")
+        return isinstance(reviews, list) and any(
+            _has_text(review)
+            or (isinstance(review, dict) and any(_has_text(v) for v in review.values()))
+            for review in reviews
+        )
+    return False
+
+
+def validate(data_root: Path) -> None:
+    errors: list[str] = []
+    for conference in CONFERENCES:
+        conference_root = data_root / conference
+        required = ("papers", *REVIEW_DIRS)
+        for folder_name in required:
+            folder = conference_root / folder_name
+            if not folder.is_dir():
+                errors.append(f"Missing directory: {folder}")
+
+        papers_dir = conference_root / "papers"
+        if not papers_dir.is_dir():
+            continue
+        paper_ids = _file_ids(papers_dir)
+        if not paper_ids:
+            errors.append(f"No paper files found in {papers_dir}")
+            continue
+        unusable_papers = [
+            path.name
+            for path in papers_dir.iterdir()
+            if path.is_file() and not _nonempty_text_file(path)
+        ]
+        if unusable_papers:
+            errors.append(
+                f"{conference}/papers has {len(unusable_papers)} empty or unreadable file(s)"
+            )
+        for reviewer in REVIEW_DIRS:
+            review_dir = conference_root / reviewer
+            if not review_dir.is_dir():
+                continue
+            missing = paper_ids - _file_ids(review_dir)
+            if missing:
+                errors.append(
+                    f"{conference}/{reviewer} is missing {len(missing)} paper(s)"
+                )
+            invalid = [
+                path.name
+                for path in review_dir.iterdir()
+                if path.is_file()
+                and (
+                    not _nonempty_text_file(path)
+                    if path.suffix == ".txt"
+                    else not _valid_review_json(path, reviewer)
+                )
+            ]
+            if invalid:
+                errors.append(
+                    f"{conference}/{reviewer} has {len(invalid)} unusable review file(s)"
+                )
+
+    if errors:
+        raise ValueError("Dataset validation failed:\n  - " + "\n  - ".join(errors))
+
+
+def update_root_env(data_root: Path) -> None:
+    env_path = REPO_ROOT / ".env"
+    if env_path.exists():
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    else:
+        example = REPO_ROOT / ".env.example"
+        lines = example.read_text(encoding="utf-8").splitlines()
+
+    setting = f"DATA_ROOT={data_root.resolve()}"
+    for index, line in enumerate(lines):
+        if line.startswith("DATA_ROOT="):
+            lines[index] = setting
+            break
+    else:
+        lines.insert(0, setting)
+    env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Configured DATA_ROOT in {env_path}")
+
+
+def install_source(source: Path, output_dir: Path, force: bool) -> None:
+    with tempfile.TemporaryDirectory(prefix="prism-data-", dir=THIS_DIR) as temp:
+        staging = Path(temp)
+        if source.is_dir():
+            extracted_root = source
+        else:
+            if source.suffix.lower() != ".zip":
+                raise ValueError(f"Expected a .zip archive: {source}")
+            safe_extract(source, staging)
+            extracted_root = staging
+
+        source_root = find_data_root(extracted_root)
+        if output_dir.exists():
+            if not force:
+                validate(output_dir)
+                print(f"Using existing validated dataset: {output_dir}")
+                return
+            shutil.rmtree(output_dir)
+        output_dir.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(source_root, output_dir)
 
 
 def main() -> int:
     args = parse_args()
     output_dir = args.output_dir.expanduser().resolve()
 
-    cleanup_targets: list[Path] = []
-
-    # --- Step 1: SUBSET_1000 (raw papers + human reviews) -----------------
-    if args.subset_source is not None:
-        subset_path = args.subset_source.expanduser().resolve()
-        if not subset_path.exists():
-            print(f"--subset-source not found: {subset_path}", file=sys.stderr)
-            return 1
-        print(f"== Using local SUBSET_1000 source: {subset_path}")
-    else:
-        subset_path = _download(
-            download_data.SUBSET_ARCHIVE, args.download_dir, args.token, args.force
-        )
-        if not args.keep_downloads:
-            cleanup_targets.append(subset_path)
-            cleanup_targets.append(subset_path.with_suffix(""))  # extracted dir
-
-    # --- Step 2: Final_LLM_Reviewer_Data_Sample (LLM reviewer outputs) ----
-    sample_path: Path | None = None
-    if not args.no_sample:
-        if args.sample_source is not None:
-            sample_path = args.sample_source.expanduser().resolve()
-            if not sample_path.exists():
-                print(f"--sample-source not found: {sample_path}", file=sys.stderr)
-                return 1
-            print(f"== Using local LLM-reviewer sample source: {sample_path}")
-        else:
-            sample_path = _download(
-                download_data.SAMPLE_ARCHIVE, args.download_dir, args.token, args.force
-            )
-            if not args.keep_downloads:
-                cleanup_targets.append(sample_path)
-                cleanup_targets.append(sample_path.with_suffix(""))
-
-    # --- Step 3 + 4: map subset, overlay sample ---------------------------
-    print("== Mapping Hugging Face layout -> Final_LLM_Reviewer_Data/")
-    sys.argv = [
-        "map_hf_to_aspect_layout.py",
-        "--source", str(subset_path),
-        "--output-dir", str(output_dir),
-        "--mode", args.materialize,
-        "--max-papers-per-venue", str(args.max_papers_per_venue),
-    ]
-    if sample_path is not None:
-        sys.argv += ["--overlay", str(sample_path)]
-    if args.write_env:
-        sys.argv.append("--write-env")
-    if args.force:
-        sys.argv.append("--force")
-
-    rc = map_hf_to_aspect_layout.main()
-    if rc != 0:
-        return rc
-
-    # --- Step 5: clean up the downloaded intermediates --------------------
-    if cleanup_targets:
-        if args.materialize == "symlink":
+    if output_dir.exists() and not args.force:
+        try:
+            validate(output_dir)
+        except ValueError:
             print(
-                "Skipping cleanup because --materialize=symlink keeps DATA_ROOT "
-                "pointing at the extracted source files. Re-run with "
-                "--materialize copy (default) or pass --keep-downloads to silence.",
+                f"Existing dataset is incomplete: {output_dir}\n"
+                "Re-run with --force to replace it.",
                 file=sys.stderr,
             )
-        else:
-            print("== Cleaning up downloaded intermediates")
-            _cleanup(cleanup_targets)
+            return 1
+        update_root_env(output_dir)
+        print(f"Dataset is ready: {output_dir}")
+        return 0
 
-    print()
-    print(f"Prepared DATA_ROOT: {output_dir}")
+    downloaded = False
+    if args.source:
+        source = args.source.expanduser().resolve()
+        if not source.exists():
+            print(f"Source not found: {source}", file=sys.stderr)
+            return 1
+    else:
+        source = download_data.download_file(
+            download_data.DEMO_ARCHIVE, THIS_DIR, args.token, args.force
+        )
+        downloaded = True
+
+    try:
+        install_source(source, output_dir, args.force)
+        validate(output_dir)
+        update_root_env(output_dir)
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        print(f"Data setup failed: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        if downloaded and not args.keep_download:
+            source.unlink(missing_ok=True)
+
+    print(f"Dataset is ready: {output_dir}")
+    print("Run the pipeline with: python run.py")
     return 0
 
 

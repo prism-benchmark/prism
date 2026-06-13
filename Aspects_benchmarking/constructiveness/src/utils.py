@@ -287,14 +287,22 @@ def load_paper_metadata_icml(human_data: dict) -> dict:
 
 def get_paper_pairs_from_ids(
     human_folder: str,
-    paper_ids_file: str,
+    paper_ids_file: str | None,
 ) -> list[tuple[str, str]]:
     """Return list of (paper_id, human_path) for papers listed in paper_ids_file.
 
+    If the optional manifest is absent, discover IDs from human_folder.
     Only papers whose .json file exists in human_folder are returned.
     """
-    with open(paper_ids_file, "r", encoding="utf-8") as f:
-        ids = [line.strip() for line in f if line.strip()]
+    if paper_ids_file and os.path.exists(paper_ids_file):
+        with open(paper_ids_file, "r", encoding="utf-8") as f:
+            ids = [line.strip() for line in f if line.strip()]
+    else:
+        ids = sorted(
+            os.path.splitext(name)[0]
+            for name in os.listdir(human_folder)
+            if name.endswith(".json")
+        )
 
     pairs = []
     for pid in ids:
@@ -478,14 +486,22 @@ def load_cyclereview_metadata(filepath: str) -> dict:
 
 def get_cyclereview_pairs_from_ids(
     cyclereview_folder: str,
-    paper_ids_file: str,
+    paper_ids_file: str | None,
 ) -> list[tuple[str, str]]:
     """Return list of (paper_id, cyclereview_path) for papers listed in paper_ids_file.
 
+    If the optional manifest is absent, discover IDs from cyclereview_folder.
     Only papers whose .json file exists in cyclereview_folder are returned.
     """
-    with open(paper_ids_file, "r", encoding="utf-8") as f:
-        ids = [line.strip() for line in f if line.strip()]
+    if paper_ids_file and os.path.exists(paper_ids_file):
+        with open(paper_ids_file, "r", encoding="utf-8") as f:
+            ids = [line.strip() for line in f if line.strip()]
+    else:
+        ids = sorted(
+            os.path.splitext(name)[0]
+            for name in os.listdir(cyclereview_folder)
+            if name.endswith(".json")
+        )
 
     pairs = []
     for pid in ids:
@@ -520,4 +536,3 @@ def truncate_review_text(review_text: str, max_chars: int = 20000) -> str:
         truncated = truncated[:last_period + 1]
     
     return truncated + "\n\n[...truncated...]"
-

@@ -45,11 +45,11 @@ python compute_flaw_metrics.py              # aggregate metrics
 
 | Flag | Source folder |
 |---|---|
-| `sea` | `sea_{conf}/` |
-| `tree` | `tree_{conf}/` |
-| `reviewer2` | `reviewer2_{conf}/` |
-| `deepreview` | `deepreview_{conf}/` |
-| `cyclereview` | `cyclereview_{conf}/` |
+| `sea` | `<DATA_ROOT>/<Conference>/sea/` |
+| `tree` | `<DATA_ROOT>/<Conference>/tree/` |
+| `reviewer2` | `<DATA_ROOT>/<Conference>/reviewer2/` |
+| `deepreview` | `<DATA_ROOT>/<Conference>/deepreview/` |
+| `cyclereview` | `<DATA_ROOT>/<Conference>/cyclereview/` |
 
 ## Environment Variables
 
@@ -59,4 +59,3 @@ MIMO_API_KEY=...            # Mimo evaluator
 AZURE_OPENAI_API_KEY=...    # Azure evaluator (optional)
 OPENAI_API_KEY=...          # OpenAI evaluator (optional)
 ```
-

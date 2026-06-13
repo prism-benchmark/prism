@@ -9,7 +9,7 @@ import sys
 # Load shared env (repo root)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from env_loader import (
-    DATA_ROOT, conf_path,
+    DATA_ROOT, conf_path, reviewer_dir,
     GOOGLE_API_KEY, GEMINI_MODEL,
     MIMO_API_KEY, MIMO_MODEL, MIMO_BASE_URL,
     validate_env,
@@ -25,30 +25,6 @@ from ai_config import (
 # ---------------------------------------------------------------------------
 # Reviewer sub-folder names inside each conference directory
 # ---------------------------------------------------------------------------
-REVIEWER_SUBDIRS = {
-    "sea":         "sea_{conf_lower}",
-    "tree":        "tree_{conf_lower}",
-    "reviewer2":   "reviewer2_{conf_lower}",
-    "deepreview":  "deepreview_{conf_lower}",
-    "cyclereview": "cyclereview_{conf_lower}",
-    "human":       "human_reviews",
-}
-
-
-def reviewer_dir(conference: str, reviewer: str) -> str:
-    """Return path to reviewer data for a given conference.
-
-    Args:
-        conference: ICLR2024 | ICLR2025 | ICLR2026 | ICML2025 | NeurIPS2025
-        reviewer:   sea | tree | reviewer2 | deepreview | cyclereview | human
-    """
-    template = REVIEWER_SUBDIRS.get(reviewer, f"{reviewer}_{{conf_lower}}")
-    # NeurIPS uses "neurlps" in folder names (original dataset spelling)
-    conf_lower = conference.lower().replace("neurips2025", "neurlps2025")
-    subfolder = template.format(conf_lower=conf_lower)
-    return os.path.join(conf_path(conference), subfolder)
-
-
 # ---------------------------------------------------------------------------
 # Convenience constants used by run_constructiveness*.py
 # ---------------------------------------------------------------------------

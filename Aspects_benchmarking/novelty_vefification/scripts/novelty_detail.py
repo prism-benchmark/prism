@@ -36,7 +36,7 @@ import numpy as np
 # Constants
 # ---------------------------------------------------------------------------
 
-CONFERENCES = ["ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "Neurlps2025"]
+CONFERENCES = ["ICLR2024", "ICLR2025", "ICLR2026", "ICML2025", "NeurIPS2025"]
 MODELS = ["human", "sea", "deepreview", "reviewer2", "cyclereview", "tree"]
 MODEL_LABELS = ["Human", "SEA", "DeepReview", "Reviewer2", "CycleReview", "TreeReview"]
 

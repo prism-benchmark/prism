@@ -52,7 +52,7 @@ CONF_MAP = {
     "ICLR_2025": "ICLR2025",
     "ICLR_2026": "ICLR2026",
     "ICML_2025": "ICML2025",
-    "NeurIPS_2025": "Neurlps2025",
+    "NeurIPS_2025": "NeurIPS2025",
 }
 METHODS = ["human", "sea", "deepreview", "reviewer2", "cyclereview", "tree"]
 METHOD_DISPLAY = {

@@ -22,10 +22,10 @@ this shape:
       ICLR2024/
         human_reviews/{paper_id}.json
         papers/{paper_id}.grobid.txt
-        sea_iclr2024/  tree_iclr2024/  reviewer2_iclr2024/ ...
+        sea/  tree/  reviewer2/  deepreview/  cyclereview/
         paper_ids_200_iclr2024.txt
       ICLR2025/  ICLR2026/  ICML2025/
-      Neurlps2025/                       # original spelling preserved
+      NeurIPS2025/
 
 This module copies/links the Hugging Face files into that layout so the
 reviewer can run every aspect script against the same DATA_ROOT.
@@ -49,48 +49,11 @@ VENUE_MAP = {
     "ICLR_2025": "ICLR2025",
     "ICLR_2026": "ICLR2026",
     "ICML_2025": "ICML2025",
-    "NeurIPS_2025": "Neurlps2025",  # dataset folder spelling
+    "NeurIPS_2025": "NeurIPS2025",
 }
 
-# Per-conference reviewer subfolders expected by the aspect scripts.
-# These are placeholders; LLM-reviewer outputs are produced by LLM_reviewer/.
-LLM_REVIEWER_SUFFIXES = {
-    "ICLR2024": [
-        "sea_iclr2024",
-        "tree_iclr2024",
-        "reviewer2_iclr2024",
-        "deepreview_iclr2024",
-        "cyclereview_iclr2024",
-    ],
-    "ICLR2025": [
-        "sea_iclr2025",
-        "tree_iclr2025",
-        "reviewer2_iclr2025",
-        "deepreview_iclr2025",
-        "cyclereview_iclr2025",
-    ],
-    "ICLR2026": [
-        "sea_iclr2026",
-        "tree_iclr2026",
-        "reviewer2_iclr2026",
-        "deepreview_iclr2026",
-        "cyclereview_iclr2026",
-    ],
-    "ICML2025": [
-        "sea_icml2025",
-        "tree_icml2025",
-        "reviewer2_icml2025",
-        "deepreview_icml2025",
-        "cyclereview_icml2025",
-    ],
-    "Neurlps2025": [
-        "sea_neurlps2025",
-        "tree_neurips2025",
-        "reviewer2_neurips2025",
-        "deepreview_neurips2025",
-        "cyclereview_neurlps2025",
-    ],
-}
+# Reviewer folders have the same names in every conference.
+LLM_REVIEWER_DIRS = ("sea", "tree", "reviewer2", "deepreview", "cyclereview")
 
 # `paper_ids_200_*` filename per conference (the script then writes
 # `paper_ids_50_*` from that list via prepare_aspect_benchmark_data.py).
@@ -99,7 +62,7 @@ ID_200_NAMES = {
     "ICLR2025": "paper_ids_200_iclr2025.txt",
     "ICLR2026": "paper_ids_200_iclr2026.txt",
     "ICML2025": "paper_ids_200_icml2025.txt",
-    "Neurlps2025": "paper_ids_200_neurlps2025.txt",
+    "NeurIPS2025": "paper_ids_200_neurips2025.txt",
 }
 
 ID_50_NAMES = {
@@ -107,9 +70,7 @@ ID_50_NAMES = {
     "ICLR2025": ["paper_ids_50_iclr2025.txt"],
     "ICLR2026": ["paper_ids_50_iclr2026.txt"],
     "ICML2025": ["paper_ids_50_icml2025.txt"],
-    # env_loader looks up `paper_ids_50_neurips2025.txt`, the preparer
-    # also writes the dataset-spelled `_neurlps2025` for compatibility.
-    "Neurlps2025": ["paper_ids_50_neurips2025.txt", "paper_ids_50_neurlps2025.txt"],
+    "NeurIPS2025": ["paper_ids_50_neurips2025.txt"],
 }
 
 
@@ -348,7 +309,7 @@ def map_venue(
 
     # Placeholder LLM reviewer dirs so prepare_aspect_benchmark_data.py and
     # the aspect scripts can detect the layout immediately.
-    for sub in LLM_REVIEWER_SUFFIXES.get(out_name, []):
+    for sub in LLM_REVIEWER_DIRS:
         (venue_out / sub).mkdir(exist_ok=True)
 
     # Write 200-paper id list so prepare_aspect_benchmark_data.py can derive

@@ -71,8 +71,7 @@ CONFERENCE_FILES: dict[str, dict[str, str]] = {
     },
     "neurips2025": {
         "human":       os.path.join(_OUT_ROOT, "neurips2025", "human",       "all_results_lite.jsonl"),
-        # SEA của neurips2025 nằm trong folder typo 'neurlps2025'
-        "sea":         os.path.join(_OUT_ROOT, "neurlps2025", "sea",         "all_results_lite.jsonl"),
+        "sea":         os.path.join(_OUT_ROOT, "neurips2025", "sea",         "all_results_lite.jsonl"),
         "reviewer2":   os.path.join(_OUT_ROOT, "neurips2025", "reviewer2",   "all_results_lite.jsonl"),
         "deepreview":  os.path.join(_OUT_ROOT, "neurips2025", "deepreview",  "all_results_lite.jsonl"),
         "tree":        os.path.join(_OUT_ROOT, "neurips2025", "tree",        "all_results_lite.jsonl"),
@@ -504,5 +503,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

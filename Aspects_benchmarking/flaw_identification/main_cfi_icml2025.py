@@ -71,13 +71,13 @@ from src.utils import (
 # ---------------------------------------------------------------------------
 # Path configuration
 # ---------------------------------------------------------------------------
-from paths_config import ICML2025_DATA
-HUMAN_FOLDER      = os.path.join(ICML2025_DATA, "human_reviews")
-SEA_FOLDER        = os.path.join(ICML2025_DATA, "sea_icml2025")
-TREE_FOLDER       = os.path.join(ICML2025_DATA, "tree_icml2025_2")
-REVIEWER2_FOLDER  = os.path.join(ICML2025_DATA, "reviewer2_icml2025")
-DEEPREVIEW_FOLDER = os.path.join(ICML2025_DATA, "deepreview_icml2025")
-CYCLEREVIEW_FOLDER= os.path.join(ICML2025_DATA, "cyclereview_icml2025")
+from paths_config import ICML2025_DATA, reviewer_dir
+HUMAN_FOLDER       = reviewer_dir("ICML2025", "human")
+SEA_FOLDER         = reviewer_dir("ICML2025", "sea")
+TREE_FOLDER        = reviewer_dir("ICML2025", "tree")
+REVIEWER2_FOLDER   = reviewer_dir("ICML2025", "reviewer2")
+DEEPREVIEW_FOLDER  = reviewer_dir("ICML2025", "deepreview")
+CYCLEREVIEW_FOLDER = reviewer_dir("ICML2025", "cyclereview")
 PAPERS_FOLDER     = os.path.join(ICML2025_DATA, "papers")
 PAPER_IDS_FILE    = os.path.join(ICML2025_DATA, "paper_ids_200_icml2025.txt")
 OUTPUT_DIR        = os.path.join(_HERE, "output_cfi_icml2025_2")
@@ -405,7 +405,13 @@ def _load_cfi_cache(path: str) -> list[dict]:
 
 def _load_target_ids() -> set[str]:
     if not os.path.exists(PAPER_IDS_FILE):
-        raise FileNotFoundError(f"Paper-IDs file not found: {PAPER_IDS_FILE}")
+        if not os.path.isdir(PAPERS_FOLDER):
+            raise FileNotFoundError(f"Papers folder not found: {PAPERS_FOLDER}")
+        return {
+            name.removesuffix(".grobid.txt").removesuffix(".txt")
+            for name in os.listdir(PAPERS_FOLDER)
+            if name.endswith((".txt", ".grobid.txt"))
+        }
     ids: set[str] = set()
     with open(PAPER_IDS_FILE, "r", encoding="utf-8") as f:
         for line in f:
@@ -601,4 +607,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
