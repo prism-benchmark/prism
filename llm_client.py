@@ -661,7 +661,7 @@ class PRISMLLMClient:
         elif self.provider == "openrouter":
             self._init_openai_compatible("OpenRouter")
         else:
-            raise ValueError(f"Unsupported provider after validation: {self.provider}")
+            self._init_openai_compatible(self.provider)
 
     def _init_openai(self):
         try:

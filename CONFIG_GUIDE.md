@@ -344,6 +344,49 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 The system automatically resolves `{PROVIDER}_API_KEY` and `{PROVIDER}_BASE_URL` from `.env`. Unknown providers are treated as OpenAI-compatible.
 
+### Local vLLM server
+
+Start an OpenAI-compatible server on port 8001:
+
+```bash
+vllm serve google/gemma-4-12B-it \
+  --host 0.0.0.0 \
+  --port 8001 \
+  --served-model-name google/gemma-4-12B-it \
+  --dtype auto \
+  --max-model-len 16384
+```
+
+For multiple GPUs, add `--tensor-parallel-size N`. Configure PRISM:
+
+```bash
+# .env
+LOCAL_API_KEY=local
+LOCAL_BASE_URL=http://localhost:8001/v1
+LOCAL_MODEL=google/gemma-4-12B-it
+```
+
+Then select the provider for an aspect:
+
+```yaml
+aspects:
+  constructiveness:
+    provider: local
+    model: ${LOCAL_MODEL:google/gemma-4-12B-it}
+    temperature: 0.0
+    max_tokens: 8000
+```
+
+Verify the server before running PRISM:
+
+```bash
+curl http://localhost:8001/v1/models
+curl http://localhost:8001/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer local' \
+  -d '{"model":"google/gemma-4-12B-it","messages":[{"role":"user","content":"Reply with OK"}],"max_tokens":8}'
+```
+
 ---
 
 ## Data Setup

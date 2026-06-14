@@ -111,6 +111,10 @@ providers:
     api_key: ${LLM_API_KEY}
     base_url: https://openrouter.ai/api/v1
 
+  local:
+    api_key: ${LOCAL_API_KEY:local}
+    base_url: ${LOCAL_BASE_URL:http://localhost:8001/v1}
+
 # ── Global Defaults ──────────────────────────────────────────────────────
 # Used when an aspect or reviewer does not specify its own override.
 defaults:
@@ -154,6 +158,11 @@ provider_defaults:
     default_temperature: 0.0
     default_max_tokens: 64000
 
+  local:
+    default_model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
+    default_temperature: 0.0
+    default_max_tokens: 8000
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Benchmarking Aspects (Aspects_benchmarking evaluators)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -164,17 +173,17 @@ aspects:
   # ── Constructiveness evaluation (ARC scoring) ─────────────────────────
   constructiveness:
     enabled: true
-    provider: mimo
-    model: ${MIMO_MODEL:mimo-v2.5}
-    temperature: ${MIMO_TEMP:0.0}
+    provider: local
+    model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
+    temperature: 0.0
     max_tokens: 8000
 
   # ── Depth of Analysis (argument segmentation, grounding) ──────────────
   depth_of_analysis:
     enabled: true
-    provider: mimo
-    model: ${MIMO_MODEL:mimo-v2.5}
-    temperature: ${MIMO_TEMP:0.0}
+    provider: local
+    model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
+    temperature: 0.0
     max_tokens: 8000
 
   # ── Flaw Identification ──────────────────────────────────────────────
@@ -182,23 +191,23 @@ aspects:
     enabled: true
     # Step 1: Atomize & Group — output can be very large
     step1:
-      provider: mimo
-      model: ${MIMO_MODEL:mimo-v2.5}
-      temperature: ${MIMO_TEMP:0.0}
+      provider: local
+      model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
+      temperature: 0.0
       max_tokens: 8000
     # Step 2: Judge Flaws — compact output
     step2:
-      provider: mimo
-      model: ${MIMO_MODEL:mimo-v2.5}
-      temperature: ${MIMO_TEMP:0.0}
+      provider: local
+      model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
+      temperature: 0.0
       max_tokens: 8000
 
   # ── Novelty Verification ─────────────────────────────────────────────
   novelty:
     enabled: true
-    provider: mimo
-    model: ${MIMO_MODEL:mimo-v2.5}
-    temperature: ${MIMO_TEMP:0.0}
+    provider: local
+    model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
+    temperature: 0.0
     max_tokens: 8000
 
 # ═══════════════════════════════════════════════════════════════════════════
