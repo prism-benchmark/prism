@@ -441,7 +441,7 @@ def extract_task1(
     llm_client: Any = None,
     max_paper_chars: int = 128_000,
     max_review_chars: int = 32_000,
-    max_tokens: int = 256_000,
+    max_tokens: Optional[int] = None,
     temperature: float = 0.0,
     use_cache: bool = False,
     cache_ttl: str = "1h",
@@ -477,6 +477,11 @@ def extract_task1(
 
     if client is None:
         raise Task1ExtractionError("LLM client could not be initialized (create_llm_client returned None).")
+
+    if max_tokens is None:
+        from config import EFFECTIVE_LLM_MAX_TOKENS
+
+        max_tokens = EFFECTIVE_LLM_MAX_TOKENS
 
     data = client.generate_json(
         messages,
