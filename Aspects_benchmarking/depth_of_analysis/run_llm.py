@@ -311,8 +311,12 @@ def run_llm_pipeline(source_name: str, workers: int = 1):
 
     # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
     from src.evaluator import DepthOfAnalysisEvaluator
-    evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
-    print(f"🤖 Backend: Unified Pluggable Client  |  Model: {config.GEMINI_MODEL}  |  Max Retries: 5")
+    evaluator = DepthOfAnalysisEvaluator()
+    print(
+        "🤖 Backend: Unified Pluggable Client"
+        f"  |  Provider: {evaluator.client.provider}"
+        f"  |  Model: {evaluator.client.model}"
+    )
 
     # Đếm tổng file để hiển thị progress
     if fmt in ("txt", "reviewer2_txt"):
@@ -456,4 +460,3 @@ if __name__ == "__main__":
             pass
 
     run_llm_pipeline(source_name=args.source, workers=workers)
-

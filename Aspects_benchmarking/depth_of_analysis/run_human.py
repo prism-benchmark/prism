@@ -65,8 +65,12 @@ def run_human_pipeline(conference: str = "ICLR2026", workers: int = 1):
     )
     # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
     from src.evaluator import DepthOfAnalysisEvaluator
-    evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
-    print(f"🤖 Backend: Unified Pluggable Client  |  Model: {config.GEMINI_MODEL}")
+    evaluator = DepthOfAnalysisEvaluator()
+    print(
+        "🤖 Backend: Unified Pluggable Client"
+        f"  |  Provider: {evaluator.client.provider}"
+        f"  |  Model: {evaluator.client.model}"
+    )
 
     # Lấy danh sách tất cả file Human
     all_files = sorted([

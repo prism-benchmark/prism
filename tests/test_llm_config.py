@@ -527,4 +527,3 @@ def test_prism_llm_client_exponential_backoff(monkeypatch):
     assert 1.5 <= sleep_calls[0] <= 2.5
     assert 2.5 <= sleep_calls[1] <= 3.5
 
-

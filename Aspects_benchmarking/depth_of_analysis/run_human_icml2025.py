@@ -120,8 +120,12 @@ def load_paper_ids(filepath: str) -> list:
 def run_human_icml2025_pipeline(paper_ids_file: str = None, run_all: bool = False):
     # Khởi tạo evaluator (sử dụng central unified agent DepthOfAnalysisEvaluator)
     from src.evaluator import DepthOfAnalysisEvaluator
-    evaluator = DepthOfAnalysisEvaluator(api_key=config.GEMINI_API_KEY, model=config.GEMINI_MODEL)
-    print(f"🤖 Backend: Unified Pluggable Client  |  Model: {config.GEMINI_MODEL}")
+    evaluator = DepthOfAnalysisEvaluator()
+    print(
+        "🤖 Backend: Unified Pluggable Client"
+        f"  |  Provider: {evaluator.client.provider}"
+        f"  |  Model: {evaluator.client.model}"
+    )
 
     # Xác định danh sách paper IDs cần xử lý
     if run_all:
@@ -254,4 +258,3 @@ if __name__ == "__main__":
         paper_ids_file=args.paper_ids,
         run_all=args.all
     )
-

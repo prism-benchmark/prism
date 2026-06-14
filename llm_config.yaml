@@ -55,6 +55,17 @@ run_profiles:
     - deepreview
     - cyclereview
 
+  # All benchmarking aspects and local reviewer generators; excludes TreeReview.
+  all_local:
+    - constructiveness
+    - depth_of_analysis
+    - flaw_identification
+    - novelty
+    - sea
+    - reviewer2
+    - deepreview
+    - cyclereview
+
   # Quick smoke test — fast models, single aspect + single reviewer
   quick:
     - constructiveness

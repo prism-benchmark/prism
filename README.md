@@ -81,6 +81,7 @@ This evaluates **Depth of Analysis**, **Novelty Assessment**, **Flaw Identificat
 ```bash
 python run.py --list                                # see available aspects/reviewers
 python run.py --profile aspects                     # evaluation only
+python run.py --profile all_local                   # all aspects + local reviewers
 python run.py --only depth_of_analysis              # single aspect
 python run.py --conference iclr2024                 # single venue
 python run.py --limit 10                            # first N papers (quick test)
