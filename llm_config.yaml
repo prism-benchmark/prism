@@ -118,8 +118,8 @@ providers:
 # ── Global Defaults ──────────────────────────────────────────────────────
 # Used when an aspect or reviewer does not specify its own override.
 defaults:
-  provider: openai
-  model: gpt-4o-mini
+  provider: local
+  model: ${LOCAL_MODEL:LiquidAI/LFM2.5-8B-A1B}
   temperature: 0.0
   max_tokens: 4096
   max_retries: ${MAX_RETRIES:3}

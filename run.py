@@ -121,6 +121,11 @@ def _aspect_dir(aspect: str) -> Path:
     return _REPO_ROOT / mapping[aspect]
 
 
+def _aspect_output_dir(output_root: Path, aspect: str) -> Path:
+    """Return the centralized output directory for an aspect."""
+    return output_root / aspect
+
+
 def _read_paper_ids(conference: str) -> List[str]:
     """Read paper IDs from a conference's paper_ids_200 file."""
     try:
@@ -164,12 +169,16 @@ LLM_TYPE_TO_DOA_FORMAT = {
 def run_depth_of_analysis(
     conferences: List[str],
     reviewers: List[str],
+    output_dir: Optional[Path] = None,
     workers: int = 1,
     extra_args: Optional[List[str]] = None,
 ) -> int:
     """Run DoA evaluation for specified conferences and reviewer types."""
     cwd = _aspect_dir("depth_of_analysis")
     exit_code = 0
+    env = os.environ.copy()
+    if output_dir is not None:
+        env["DOA_OUTPUT_ROOT"] = str(output_dir)
 
     for conf in conferences:
         conf_env = conf.upper()
@@ -190,6 +199,7 @@ def run_depth_of_analysis(
                 str(workers),
                 *(extra_args or []),
                 cwd=str(cwd),
+                env=env,
             )
             if code != 0:
                 exit_code = code
@@ -211,6 +221,7 @@ def run_depth_of_analysis(
                     str(workers),
                     *(extra_args or []),
                     cwd=str(cwd),
+                    env=env,
                 )
                 if code != 0:
                     exit_code = code
@@ -225,6 +236,7 @@ def run_depth_of_analysis(
                 conf.lower(),
                 *(extra_args or []),
                 cwd=str(cwd),
+                env=env,
             )
             if code != 0:
                 exit_code = code
@@ -249,6 +261,7 @@ REVIEWER_TO_CONSTRUCT_MODE = {
 def run_constructiveness(
     conferences: List[str],
     reviewers: List[str],
+    output_dir: Optional[Path] = None,
     limit: Optional[int] = None,
     workers: int = 1,
     extra_args: Optional[List[str]] = None,
@@ -257,6 +270,9 @@ def run_constructiveness(
     cwd = _aspect_dir("constructiveness")
     exit_code = 0
     script = cwd / "run_constructiveness.py"
+    env = os.environ.copy()
+    if output_dir is not None:
+        env["CONSTRUCTIVENESS_OUTPUT_ROOT"] = str(output_dir)
 
     if not script.exists():
         print(f"  [ERROR] Script not found: {script}")
@@ -276,7 +292,7 @@ def run_constructiveness(
             if extra_args:
                 cmd += extra_args
 
-            code = _python(*cmd, cwd=str(cwd))
+            code = _python(*cmd, cwd=str(cwd), env=env)
             if code != 0:
                 exit_code = code
 
@@ -291,6 +307,7 @@ def run_constructiveness(
 def run_flaw_identification(
     conferences: List[str],
     reviewers: List[str],
+    output_dir: Optional[Path] = None,
     limit: Optional[int] = None,
     workers: int = 1,
     extra_args: Optional[List[str]] = None,
@@ -314,6 +331,8 @@ def run_flaw_identification(
 
             cmd = [str(script), "--mode", "all", "--llm-type", rev]
             cmd += ["--workers", str(workers)]
+            if output_dir is not None:
+                cmd += ["--output-dir", str(output_dir / conf_lower / rev)]
             if limit:
                 cmd += [f"--limit={limit}"]
             if extra_args:
@@ -343,6 +362,7 @@ REVIEWER_TO_NOVELTY_TYPE = {
 def run_novelty(
     conferences: List[str],
     reviewers: List[str],
+    output_dir: Optional[Path] = None,
     limit: Optional[int] = None,
     workers: int = 1,
     extra_args: Optional[List[str]] = None,
@@ -397,6 +417,8 @@ def run_novelty(
                 "--task2-workers",
                 str(workers),
             ]
+            if output_dir is not None:
+                cmd += ["--output-dir", str(output_dir)]
             if limit:
                 cmd += ["--max-papers", str(limit)]
             if extra_args:
@@ -698,6 +720,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Concurrent papers per evaluation (default: PRISM_MAX_WORKERS or 8)",
     )
     p.add_argument(
+        "--output-dir",
+        type=Path,
+        default=_REPO_ROOT / "output",
+        help="Central directory for all aspect outputs (default: <repo>/output)",
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would run without executing",
@@ -736,6 +764,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     aspects = resolve_aspects(args)
     conferences = resolve_conferences(args)
     reviewers = resolve_reviewers(args)
+    output_root = args.output_dir.expanduser().resolve()
     # Resolve worker count
     workers = args.workers
     if workers is None:
@@ -773,6 +802,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"  Conferences : {', '.join(conferences)}")
     print(f"  Aspects     : {', '.join(aspect_names) if aspect_names else '(none)'}")
     print(f"  Reviewers   : {', '.join(reviewers) if reviewers else '(none)'}")
+    print(f"  Output      : {output_root}")
     if args.limit:
         print(f"  Limit       : {args.limit} papers")
     if workers > 1:
@@ -801,6 +831,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         dispatch_kwargs = {
             "conferences": conferences,
             "reviewers": reviewers,
+            "output_dir": _aspect_output_dir(output_root, aspect),
             "workers": workers,
             "extra_args": extra_args,
         }

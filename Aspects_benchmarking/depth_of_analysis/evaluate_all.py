@@ -40,7 +40,7 @@ import pipeline.config as config
 #  Mapping: tên hội nghị → thư mục output Human
 # ================================================================
 PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_ROOT  = os.path.join(PIPELINE_DIR, "output")
+OUTPUT_ROOT = os.environ.get("DOA_OUTPUT_ROOT") or os.path.join(PIPELINE_DIR, "output")
 
 HUMAN_CONFERENCES = {
     "iclr2024":    os.path.join(OUTPUT_ROOT, "human"),
@@ -473,5 +473,4 @@ if __name__ == "__main__":
         print("\n[!] Không có kết quả nào được tính.")
 
     print(f"\n✅ Hoàn tất!")
-
 

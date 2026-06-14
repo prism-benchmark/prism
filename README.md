@@ -85,6 +85,7 @@ python run.py --only depth_of_analysis              # single aspect
 python run.py --conference iclr2024                 # single venue
 python run.py --limit 10                            # first N papers (quick test)
 python run.py --workers 16                          # evaluate 16 papers concurrently
+python run.py --output-dir /path/to/results         # custom central output root
 python run.py --dry-run                             # preview without executing
 ```
 
@@ -128,14 +129,15 @@ The same pattern applies to any OpenAI-compatible client: add a provider entry o
 
 ## 4. Results
 
-Each pipeline writes structured results to its `output/` directory:
+Runs launched through `run.py` write all structured results under the central
+`output/` directory. Use `--output-dir` to select a different root.
 
 | Aspect | Output location | Key metrics |
 |--------|----------------|-------------|
-| Depth of Analysis | `Aspects_benchmarking/depth_of_analysis/output/metrics/` | DoA, R_premise, S_depth |
-| Constructiveness | `Aspects_benchmarking/constructiveness/output/` | MCS, D1–D5 |
-| Flaw ID & Prioritization | `Aspects_benchmarking/flaw_identification/output_cfi_*/` | Critical/Minor Recall, nCPS |
-| Novelty | `Aspects_benchmarking/novelty_vefification/output/` | NS, SR, SSR |
+| Depth of Analysis | `output/depth_of_analysis/` | DoA, R_premise, S_depth |
+| Constructiveness | `output/constructiveness/` | MCS, D1-D5 |
+| Flaw ID & Prioritization | `output/flaw_identification/` | Critical/Minor Recall, nCPS |
+| Novelty | `output/novelty/` | NS, SR, SSR |
 
 Aggregated summary CSVs correspond to Table 1 in the paper.
 
